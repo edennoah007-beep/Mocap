@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stand-In · Live Mocap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a film-set tool — calm, exact, a little theatrical where it counts (REC, countdown).
+   IDEA: a VFX stage: chroma-key green marks, slate stripes, a monitor you watch yourself in.
+   PICTURE: the live stage itself — your avatar standing in for you, background restored.
+   COLOUR and TYPE: graphite ground, chroma green #00c853 as the one accent, tally red for REC; Space Grotesk + Inter.
+   LAYOUT: control rail left (three steps), big monitor right; stacks on phones. */
+:root{--bg:#0c0e0f;--panel:#141719;--panel2:#1b1f22;--line:#2a3034;--ink:#eef1ec;--mute:#99a29c;--key:#00c853;--keyd:#00a843;--rec:#ff3b30;--l:#2fd66b;--r:#ff8a5c}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;display:grid;grid-template-rows:58px minmax(0,1fr);overflow:hidden}
+h1,h2,h3,.brand b,.steps button,.btn,.seg button{font-family:"Space Grotesk",Inter,sans-serif}
+.top{display:flex;align-items:center;gap:18px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.brand b{font-size:19px;letter-spacing:.2px}
+.brand span{color:var(--mute);font-size:13px}
+.slate{width:30px;height:22px;border-radius:4px;background:repeating-linear-gradient(135deg,var(--ink) 0 6px,#000 6px 12px);position:relative}
+.slate:after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:10px;background:var(--key);border-radius:0 0 4px 4px}
+.steps{display:flex;gap:6px;margin-left:auto}
+.steps button{background:none;border:1px solid var(--line);color:var(--mute);border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer;min-height:38px}
+.steps button.on{border-color:var(--key);color:var(--ink);background:rgba(0,200,83,.12)}
+.steps button:disabled{opacity:.4;cursor:not-allowed}
+.steps i{font-style:normal;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--panel2);margin-right:6px;font-size:12px}
+.steps button.on i{background:var(--key);color:#03170a}
+.app{display:grid;grid-template-columns:372px minmax(0,1fr);min-height:0}
+.panel{overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:18px 18px 40px}
+.pane{display:none}.pane.on{display:block}
+.panel h2{font-size:24px;line-height:1.1;margin:0 0 6px}
+.panel p{margin:0 0 12px;color:var(--mute);font-size:14px}
+.group{border-top:1px solid var(--line);padding:14px 0 6px;margin-top:12px}
+.group h3{font-size:14px;margin:0 0 10px;color:var(--ink);font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;min-height:44px;font-weight:500}
+.btn:hover{border-color:#3d454a}
+.btn:focus-visible,.seg button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+.btn.primary{background:var(--key);border-color:var(--key);color:#03170a;font-weight:600}
+.btn.primary:hover{background:#19dd6a}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btns .btn{flex:1 1 auto}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg button{flex:1 1 auto;background:none;border:0;color:var(--mute);border-radius:7px;padding:8px 10px;font-size:13px;cursor:pointer;min-height:38px}
+.seg button.on{background:#2a3136;color:var(--ink)}
+.drop{display:block;border:1.5px dashed #3a4247;border-radius:14px;padding:22px 16px;text-align:center;cursor:pointer;background:repeating-linear-gradient(135deg,transparent 0 14px,rgba(255,255,255,.015) 14px 28px)}
+.drop:hover,.drop.over{border-color:var(--key);background-color:rgba(0,200,83,.06)}
+.drop b{display:block;font-family:"Space Grotesk";font-size:17px;margin-bottom:4px}
+.drop small{color:var(--mute);font-size:13px}
+.drop input{display:none}
+.or{display:flex;align-items:center;gap:10px;color:var(--mute);font-size:13px;margin:12px 0}
+.or:before,.or:after{content:"";flex:1;height:1px;background:var(--line)}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:14px}
+.card .name{font-weight:600;overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:13px;padding:3px 9px;border-radius:999px;background:#242a2e;color:var(--mute);white-space:nowrap}
+.chip.ok{background:rgba(0,200,83,.15);color:#7cf0a8}
+.chip.warn{background:rgba(255,138,92,.15);color:#ffb08f}
+.ctl{display:grid;grid-template-columns:110px minmax(0,1fr) 46px;align-items:center;gap:10px;margin:8px 0;font-size:14px}
+.ctl output{color:var(--mute);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--key);height:28px}
+.check{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:14px;cursor:pointer;min-height:32px}
+.check input{width:18px;height:18px;accent-color:var(--key)}
+select{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;font:14px Inter,sans-serif;min-height:40px}
+.map{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:6px 10px;align-items:center;font-size:13px;margin:6px 0 10px}
+.map select{min-height:34px;padding:5px;font-size:13px}
+.map span.miss{color:#ffb08f}
+details{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:8px 0;background:var(--panel2)}
+summary{cursor:pointer;font-size:14px;font-weight:500}
+.stage{position:relative;background:#070809;overflow:hidden;min-height:0}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#program{object-fit:contain;display:none;touch-action:none}
+.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;pointer-events:none}
+.empty svg{width:min(320px,60%);height:auto;display:block;margin:0 auto 18px}
+.empty h1{font-size:clamp(26px,3.4vw,40px);line-height:1.05;margin:0 0 8px;text-wrap:balance}
+.empty p{color:var(--mute);margin:0;font-size:16px}
+.hud{position:absolute;left:14px;top:14px;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none}
+.hud .tag{font-size:13px;padding:5px 10px;border-radius:999px;background:rgba(10,12,13,.75);border:1px solid var(--line);color:var(--mute);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.hud .tag:before{content:"";width:7px;height:7px;border-radius:50%;background:#4a5257}
+.hud .tag.on{color:var(--ink)}.hud .tag.on:before{background:var(--key)}
+.hud .tag.plain:before{display:none}
+.dots{position:absolute;right:14px;top:14px;display:flex;gap:8px;pointer-events:none}
+.recdot{display:none;align-items:center;gap:8px;background:rgba(10,12,13,.8);border:1px solid var(--rec);color:#fff;border-radius:999px;padding:5px 12px;font:600 14px "Space Grotesk";font-variant-numeric:tabular-nums}
+.recdot:before{content:"";width:10px;height:10px;border-radius:50%;background:var(--rec);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+#liveDot{background:var(--rec);border-color:var(--rec)}#liveDot:before{background:#fff}
+.meter{height:6px;background:#242a2e;border-radius:3px;overflow:hidden;margin:6px 0 10px}.meter i{display:block;height:100%;width:0;background:var(--key);transition:width .08s}
+.dest{display:none;margin-top:12px;font-size:14px}.dest.on{display:block}
+.dest ol{margin:6px 0 10px;padding-left:20px;color:var(--mute)}.dest li{margin:4px 0}.dest li b{color:var(--ink)}
+.field{display:grid;gap:6px;margin:8px 0}.field label{font-size:13px;color:var(--mute)}
+.field input{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:16px Inter,sans-serif;min-height:44px;width:100%}
+.golive{width:100%;min-height:52px;font-size:16px;margin-top:6px}
+.golive.on{background:#fff;border-color:#fff;color:#111}
+html.gamer,html.gamer body,html.gamer .stage{background:transparent!important}
+html.gamer body{height:100vh!important;overflow:hidden!important;grid-template-rows:1fr!important}
+html.gamer .app{grid-template-columns:1fr!important;height:100vh}
+html.gamer .stage{height:100vh!important;order:0}
+html.gamer .top,html.gamer .panel,html.gamer .hud,html.gamer .dots,html.gamer .empty,html.gamer .vidbar,html.gamer .status,html.gamer #toast,html.gamer .countdown{display:none!important}
+.gm-start{width:100%;min-height:56px;font-size:17px;margin-top:8px}
+input[type=color]{width:100%;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);padding:2px}
+@media (prefers-reduced-motion:reduce){.recdot:before{animation:none}}
+.countdown{position:absolute;inset:0;display:none;place-items:center;font:700 clamp(80px,14vw,180px) "Space Grotesk";color:#fff;text-shadow:0 6px 40px rgba(0,0,0,.6);pointer-events:none}
+.countdown small{display:block;font-size:18px;font-weight:500;text-align:center;color:var(--ink)}
+.status{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(10,12,13,.85);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:14px;display:none;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+.vidbar{position:absolute;left:14px;right:14px;bottom:14px;display:none;align-items:center;gap:10px;background:rgba(10,12,13,.85);border:1px solid var(--line);border-radius:12px;padding:6px 10px}
+.vidbar input{flex:1}
+.vidbar .btn{min-height:36px;padding:6px 12px}
+.vidbar span{font-size:13px;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tip{position:absolute;pointer-events:none;background:#000c;border:1px solid var(--line);font-size:13px;padding:3px 8px;border-radius:6px;display:none;white-space:nowrap}
+.viewbtns{position:absolute;right:14px;top:14px;display:flex;gap:6px}
+.viewbtns .btn{min-height:36px;padding:6px 12px;font-size:13px;background:rgba(20,23,25,.85)}
+.recbtn{width:100%;min-height:56px;font-size:17px;border-radius:12px;background:var(--rec);border-color:var(--rec);color:#fff;font-weight:600}
+.recbtn:hover{background:#ff5247}
+.recbtn.stop{background:#fff;color:#111;border-color:#fff}
+.takes{display:grid;gap:10px;margin-top:10px}
+.take{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px}
+.take video{width:100%;border-radius:8px;background:#000;display:block;margin-bottom:8px}
+.take .btns .btn{min-height:38px;font-size:13px}
+.take .meta{font-size:13px;color:var(--mute);margin-bottom:6px}
+.note{font-size:13px;color:var(--mute);background:#101315;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:12px}
+.note b{color:var(--ink)}
+#toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#1d2225;border:1px solid var(--line);padding:10px 16px;border-radius:10px;font-size:14px;display:none;z-index:9;max-width:90vw}
+#toast.err{border-color:var(--rec)}
+.hide{display:none!important}
+@media(max-width:880px){
+  body{height:auto;overflow:auto;grid-template-rows:auto auto}
+  .top{flex-wrap:wrap;padding:10px 12px;gap:10px}
+  .brand span{display:none}
+  .steps{margin-left:0;width:100%}.steps button{flex:1;padding:8px 6px}
+  .app{grid-template-columns:1fr}
+  .stage{height:62vh;order:-1}
+  .panel{border-right:0;border-top:1px solid var(--line)}
+}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+  "@pixiv/three-vrm":"https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.1.0/lib/three-vrm.module.min.js"
+}}
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><div class="slate" aria-hidden="true"></div><b>Stand-In</b><span>live motion capture · CG replacement</span></div>
+  <nav class="steps" aria-label="Steps">
+    <button data-step="1" class="on"><i>1</i>Model</button>
+    <button data-step="2" disabled><i>2</i>Rig</button>
+    <button data-step="3" disabled><i>3</i>Capture</button>
+    <button data-step="4" disabled><i>4</i>Go live</button>
+  </nav>
+</header>
+
+<main class="app">
+<aside class="panel">
+
+  <!-- STEP 1 -->
+  <section class="pane on" data-pane="1">
+    <h2>Upload your character</h2>
+    <p>Rigged or not — if it has no skeleton, Stand-In builds one for you in the next step.</p>
+    <label class="drop" id="drop">
+      <b>Drop a 3D model here</b>
+      <small>.glb · .gltf · .vrm · .fbx · .obj — for .gltf, drop its .bin and textures too</small>
+      <input type="file" id="modelFile" multiple accept=".glb,.gltf,.vrm,.fbx,.obj,.bin,.png,.jpg,.jpeg,.webp,.ktx2">
+    </label>
+    <div class="or">or</div>
+    <button class="btn wide" id="mannequin">Use the test mannequin (unrigged)</button>
+
+    <div class="card hide" id="modelCard">
+      <div class="name" id="modelName"></div>
+      <div class="chips" id="modelChips"></div>
+    </div>
+
+    <div class="group hide" id="orientGroup">
+      <h3>Orientation</h3>
+      <p>The character should stand upright and face you (its front toward the camera).</p>
+      <div class="btns">
+        <button class="btn" id="turn90">Turn 90°</button>
+        <button class="btn" id="turn180">Turn 180°</button>
+        <button class="btn" id="standUp">Stand up</button>
+      </div>
+    </div>
+    <div class="group hide" id="next1Group">
+      <button class="btn primary wide" id="next1">Next: rig it</button>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="pane" data-pane="2">
+    <div id="rigAuto">
+      <h2>Auto-rig</h2>
+      <p id="autoMsg">We placed the joints for you. Drag any dot to fix it. Drag empty space to orbit, scroll to zoom.</p>
+      <div id="jointTools">
+        <h3 style="font-size:14px;margin:12px 0 8px">Fingers</h3>
+        <div class="seg" id="fingerSeg">
+          <button data-v="0">No fingers (mitten)</button>
+          <button data-v="1" class="on">5 fingers per hand</button>
+        </div>
+        <label class="check"><input type="checkbox" id="mirrorEdit" checked> Mirror edits left ↔ right</label>
+        <label class="check"><input type="checkbox" id="rigidParts"> Rigid parts (one bone per mesh piece — blocky / Roblox-style)</label>
+        <label class="check"><input type="checkbox" id="addJaw" checked> Add a jaw bone (talking mouth)</label>
+        <div class="ctl"><label for="sharp">Weight falloff</label><input type="range" id="sharp" min="2" max="10" step="0.5" value="4"><output id="sharpO">4</output></div>
+        <div class="btns" style="margin-top:8px">
+          <button class="btn" id="reguess">Re-detect joints</button>
+          <button class="btn" id="focusL">Left hand</button>
+          <button class="btn" id="focusR">Right hand</button>
+        </div>
+        <button class="btn primary wide" id="buildRig" style="margin-top:12px">Build rig</button>
+      </div>
+      <div id="builtTools" class="hide">
+        <div class="chips" id="rigChips"></div>
+        <label class="check"><input type="checkbox" id="showWeights"> Show skin weights</label>
+        <button class="btn wide" id="editJoints">Edit joints again</button>
+      </div>
+    </div>
+
+    <div id="rigMapped" class="hide">
+      <h2>Skeleton found</h2>
+      <p id="mapMsg"></p>
+      <div id="mapUI"></div>
+      <button class="btn wide" id="forceAuto">Ignore this skeleton and auto-rig instead</button>
+    </div>
+
+    <div class="group">
+      <label class="check"><input type="checkbox" id="preview" checked> Preview motion (test the deformation)</label>
+      <button class="btn primary wide" id="next2" disabled>Next: capture</button>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="pane" data-pane="3">
+    <h2>Capture</h2>
+    <p>Track yourself live with a camera, or run a video through it. Your character replaces you; the background is rebuilt behind it.</p>
+
+    <div class="group">
+      <h3>Source</h3>
+      <div class="seg" id="srcSeg"><button data-v="cam" class="on">Camera</button><button data-v="file">Video file</button></div>
+      <div id="camBox" style="margin-top:10px">
+        <select id="camSel" aria-label="Camera"><option value="">Default camera</option></select>
+        <div class="btns" style="margin-top:8px"><button class="btn primary" id="camStart">Start camera</button><button class="btn" id="camStop">Stop</button></div>
+      </div>
+      <div id="fileBox" class="hide" style="margin-top:10px">
+        <label class="drop" style="padding:14px"><b style="font-size:15px">Choose a video</b><small>.mp4 · .webm · .mov — one person, full body is best</small><input type="file" id="videoFile" accept="video/*"></label>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Look</h3>
+      <div class="seg" id="viewSeg">
+        <button data-v="replace" class="on">CG replace</button>
+        <button data-v="overlay">Overlay</button>
+        <button data-v="green">Green screen</button>
+        <button data-v="skeleton">Skeleton</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Mouth</h3>
+      <div class="ctl" style="grid-template-columns:110px minmax(0,1fr)"><label for="mouthMode">Mouth</label>
+        <select id="mouthMode"><option value="auto" selected>Auto — best this model has</option><option value="shapes">Face shapes (blendshapes)</option><option value="jaw">Jaw bone</option><option value="sticker">Drawn mouth on the face</option><option value="off">Off</option></select></div>
+      <div class="chips" id="mouthChips"></div>
+      <label class="check"><input type="checkbox" id="voiceSync"> Voice lip-sync — mouth opens when you talk</label>
+      <div class="ctl"><label for="voiceGain">Voice sensitivity</label><input type="range" id="voiceGain" min="2" max="40" step="0.5" value="12"><output id="voiceGainO">12</output></div>
+      <div class="ctl"><label for="jawAmt">Open amount</label><input type="range" id="jawAmt" min="0.2" max="2" step="0.05" value="1"><output id="jawAmtO">1</output></div>
+      <div id="stickerBox">
+        <div class="ctl"><label for="stkY">Drawn: height</label><input type="range" id="stkY" min="-0.12" max="0.12" step="0.002" value="0"><output id="stkYO">0</output></div>
+        <div class="ctl"><label for="stkS">Drawn: size</label><input type="range" id="stkS" min="0.3" max="3" step="0.05" value="1"><output id="stkSO">1</output></div>
+        <div class="ctl" style="grid-template-columns:110px minmax(0,1fr)"><label for="stkC">Drawn: colour</label><input type="color" id="stkC" value="#3b1c1f"></div>
+      </div>
+      <div class="meter" title="Mouth open"><i id="mouthMeter"></i></div>
+    </div>
+
+    <div class="group">
+      <h3>Record</h3>
+      <button class="btn recbtn" id="recBtn">● Record</button>
+      <button class="btn wide hide" id="renderFull" style="margin-top:8px">Render whole video from the start</button>
+      <label class="check"><input type="checkbox" id="recMotion" checked> Also save motion data (.glb animation)</label>
+      <label class="check"><input type="checkbox" class="micOut"> Include microphone audio</label>
+      <div class="takes" id="takes"></div>
+    </div>
+
+    <div class="group" id="plateGroup">
+      <h3>Clean background</h3>
+      <p>The background behind you fills in as you move. For a perfect result, capture it empty once.</p>
+      <div class="btns">
+        <button class="btn" id="plateShot">Capture empty background (3 s)</button>
+        <button class="btn hide" id="plateScan">Scan whole video</button>
+        <button class="btn" id="plateReset">Reset</button>
+      </div>
+      <div class="ctl"><label for="pad">Removal padding</label><input type="range" id="pad" min="2" max="40" value="14"><output id="padO">14</output></div>
+    </div>
+
+    <div class="group">
+      <h3>Fit</h3>
+      <div class="ctl"><label for="size">Size</label><input type="range" id="size" min="0.6" max="1.6" step="0.01" value="1.05"><output id="sizeO">1.05</output></div>
+      <div class="ctl"><label for="offX">Shift ↔</label><input type="range" id="offX" min="-0.3" max="0.3" step="0.005" value="0"><output id="offXO">0</output></div>
+      <div class="ctl"><label for="offY">Shift ↕</label><input type="range" id="offY" min="-0.3" max="0.3" step="0.005" value="0"><output id="offYO">0</output></div>
+      <div class="ctl"><label for="smooth">Smoothing</label><input type="range" id="smooth" min="0" max="1" step="0.01" value="0.5"><output id="smoothO">0.5</output></div>
+      <div class="ctl"><label for="pitch">Head tilt</label><input type="range" id="pitch" min="-30" max="30" step="1" value="0"><output id="pitchO">0°</output></div>
+      <div class="ctl"><label for="light">Light</label><input type="range" id="light" min="0.2" max="3" step="0.05" value="1.2"><output id="lightO">1.2</output></div>
+      <div class="ctl"><label for="fov">Camera FOV</label><input type="range" id="fov" min="25" max="90" step="1" value="45"><output id="fovO">45°</output></div>
+      <label class="check"><input type="checkbox" id="mirror" checked> Mirror (selfie view)</label>
+    </div>
+
+    <div class="group">
+      <h3>Tracking</h3>
+      <label class="check"><input type="checkbox" id="tHands" checked> Hands &amp; fingers</label>
+      <label class="check"><input type="checkbox" id="tFace" checked> Face &amp; expressions</label>
+      <div class="ctl" style="grid-template-columns:110px minmax(0,1fr)"><label for="legs">Legs</label>
+        <select id="legs"><option value="auto">Auto (when visible)</option><option value="on">Always track</option><option value="off">Keep straight (sitting)</option></select></div>
+      <div class="ctl" style="grid-template-columns:110px minmax(0,1fr)"><label for="quality">Body model</label>
+        <select id="quality"><option value="lite">Lite — fastest</option><option value="full" selected>Full — balanced</option><option value="heavy">Heavy — most accurate</option></select></div>
+    </div>
+
+    <div class="note"><b>Tips.</b> Stand 2–3 m back so your whole body is in frame, light your face, and start in a relaxed pose. Press <b>R</b> to start or stop recording.</div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="pane" data-pane="4">
+    <h2>Go live</h2>
+    <p>Stream your character to Twitch, YouTube or Discord — on its own, or on top of the game you're playing.</p>
+
+    <div class="group hide" id="gamerGroup">
+      <h3>Gamer edition — record your Android games</h3>
+      <p>Your character floats over any game while the phone records the whole screen to an MP4 in Movies/Stand-In. Motion capture keeps running the whole time.</p>
+      <div class="ctl" style="grid-template-columns:110px minmax(0,1fr)"><label for="gmOrient">Game is</label><select id="gmOrient"><option value="landscape">Landscape (most games)</option><option value="portrait">Portrait</option></select></div>
+      <div class="ctl" style="grid-template-columns:110px minmax(0,1fr)"><label for="gmQuality">Quality</label><select id="gmQuality"><option value="6000000">Standard · 6 Mbps</option><option value="10000000" selected>High · 10 Mbps</option><option value="16000000">Max · 16 Mbps</option></select></div>
+      <div class="ctl" style="grid-template-columns:110px minmax(0,1fr)"><label for="gmSize">Character</label><select id="gmSize"><option value="0">Small</option><option value="1" selected>Medium</option><option value="2">Large</option></select></div>
+      <label class="check"><input type="checkbox" id="gmMic" checked> Record my microphone</label>
+      <button class="btn primary gm-start" id="gmStart">Start gamer mode</button>
+      <p style="margin-top:10px">Then open your game. When Android asks what to record, choose <b style="color:var(--ink)">Entire screen</b> (not “a single app”), or your character won't be in the video. Stop with the ■ on the character or from the notification.</p>
+      <div class="btns hide" id="gmLast"><button class="btn primary" id="gmShare">Share last MP4</button><button class="btn" id="gmOpen">Play it</button></div>
+    </div>
+
+    <div class="group">
+      <h3>Scene</h3>
+      <div class="seg" id="layoutSeg"><button data-v="camera" class="on">Character full screen</button><button data-v="game">Game + character</button></div>
+      <div id="gameBox" class="hide" style="margin-top:12px">
+        <div class="btns"><button class="btn primary" id="gameStart">Capture game screen</button><button class="btn" id="gameStop">Stop</button></div>
+        <p style="margin-top:8px">Pick the game window or your whole screen. Tick “Share audio” in that dialog to include game sound.</p>
+        <p><b style="color:var(--ink)">Playing on an Android phone?</b> Mirror it to this computer with the free tool <b style="color:var(--ink)">scrcpy</b> (USB or Wi-Fi), then pick the scrcpy window here. Or install the Stand-In Gamer app on the phone.</p>
+        <h3>Character box</h3>
+        <div class="seg" id="layerSeg"><button data-v="avatar" class="on">Character only</button><button data-v="view">Camera look</button></div>
+        <div class="btns" style="margin-top:8px" id="cornerBtns">
+          <button class="btn" data-c="tl" aria-label="Top left">↖ Top left</button><button class="btn" data-c="tr" aria-label="Top right">↗ Top right</button>
+          <button class="btn" data-c="bl" aria-label="Bottom left">↙ Bottom left</button><button class="btn" data-c="br" aria-label="Bottom right">↘ Bottom right</button>
+        </div>
+        <div class="ctl"><label for="boxSize">Size</label><input type="range" id="boxSize" min="0.12" max="0.9" step="0.01" value="0.3"><output id="boxSizeO">0.3</output></div>
+        <label class="check"><input type="checkbox" id="autoFrame" checked> Auto-frame the character (follows you)</label>
+        <label class="check"><input type="checkbox" id="boxCard"> Card behind the character</label>
+        <p>You can also drag the character on the preview.</p>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Audio</h3>
+      <label class="check"><input type="checkbox" class="micOut"> Microphone</label>
+      <div class="ctl"><label for="micVol">Mic volume</label><input type="range" id="micVol" min="0" max="2" step="0.05" value="1"><output id="micVolO">1</output></div>
+      <div class="meter" title="Mic level"><i id="micMeter"></i></div>
+      <div class="ctl"><label for="gameVol">Game volume</label><input type="range" id="gameVol" min="0" max="2" step="0.05" value="1"><output id="gameVolO">1</output></div>
+      <div class="ctl"><label for="fileVol">Video volume</label><input type="range" id="fileVol" min="0" max="2" step="0.05" value="1"><output id="fileVolO">1</output></div>
+    </div>
+
+    <div class="group">
+      <h3>Output</h3>
+      <div class="ctl" style="grid-template-columns:110px minmax(0,1fr)"><label for="outRes">Quality</label>
+        <select id="outRes"><option value="1280x720x30" selected>720p · 30 fps</option><option value="1280x720x60">720p · 60 fps</option><option value="1920x1080x30">1080p · 30 fps</option><option value="1920x1080x60">1080p · 60 fps</option></select></div>
+      <div class="ctl"><label for="kbps">Bitrate</label><input type="range" id="kbps" min="1500" max="9000" step="250" value="4500"><output id="kbpsO">4500</output></div>
+      <button class="btn wide" id="popOut">Open clean output window</button>
+      <p style="margin-top:8px">A window with only the show in it, named “Stand-In Output” — capture it in OBS or share it in Discord.</p>
+      <button class="btn recbtn" id="recBtn2">● Record</button>
+    </div>
+
+    <div class="group">
+      <h3>Where to stream</h3>
+      <div class="seg" id="destSeg"><button data-v="twitch" class="on">Twitch</button><button data-v="youtube">YouTube</button><button data-v="discord">Discord</button><button data-v="obs">OBS</button><button data-v="whip">Custom</button></div>
+
+      <div class="dest on" data-d="twitch">
+        <p>Go live on Twitch straight from this page, no other app needed. This uses Twitch's WebRTC (WHIP) ingest, which is still in beta — if it won't connect, use the OBS tab.</p>
+        <div class="field"><label for="twKey">Stream key — Twitch dashboard → Settings → Stream</label><input id="twKey" type="password" autocomplete="off" placeholder="live_…"></div>
+        <button class="btn primary golive" data-live="twitch">Go live on Twitch</button>
+      </div>
+      <div class="dest" data-d="youtube">
+        <p>YouTube doesn't accept a stream sent from a web page, so send it through OBS Studio (free):</p>
+        <ol>
+          <li>Click <b>Open clean output window</b> above.</li>
+          <li>In OBS: <b>Sources → + → Window Capture</b> → pick “Stand-In Output”. On Windows use capture method <b>Windows 10 (1903 and up)</b>.</li>
+          <li>Right-click the source → <b>Transform → Fit to screen</b>.</li>
+          <li>OBS <b>Settings → Stream</b> → Service <b>YouTube</b> → paste the stream key from YouTube Studio → <b>Start streaming</b>.</li>
+        </ol>
+        <p>Streaming with a relay service that takes WHIP (it forwards to YouTube)? Use the Custom tab.</p>
+      </div>
+      <div class="dest" data-d="discord">
+        <p><b style="color:var(--ink)">Share it in a call:</b></p>
+        <ol><li>Click <b>Open clean output window</b>.</li><li>In Discord: <b>Share your screen</b> (or <b>Go Live</b> in a server) → pick “Stand-In Output”.</li><li>For game streams, choose the <b>Game + character</b> scene first so friends see both.</li></ol>
+        <p><b style="color:var(--ink)">Use it as your webcam:</b></p>
+        <ol><li>In OBS add the “Stand-In Output” window (see YouTube tab), then click <b>Start Virtual Camera</b>.</li><li>Discord <b>Settings → Voice &amp; Video → Camera → OBS Virtual Camera</b>.</li></ol>
+      </div>
+      <div class="dest" data-d="obs">
+        <ol>
+          <li>Click <b>Open clean output window</b>, then add it in OBS with <b>Window Capture</b>.</li>
+          <li>Works for Twitch, YouTube, Kick, TikTok — anything OBS streams to.</li>
+          <li>Want only the character, on top of other OBS scenes? Set <b>Capture → Look → Green screen</b> and the <b>Character full screen</b> scene, then add a <b>Chroma Key</b> filter (green) to the window source.</li>
+          <li><b>Start Virtual Camera</b> in OBS to use your character as a webcam in Zoom, Discord, Google Meet.</li>
+        </ol>
+      </div>
+      <div class="dest" data-d="whip">
+        <p>Any service that gives you a WHIP URL (for example a restream relay or a media server).</p>
+        <div class="field"><label for="whipUrl">WHIP URL</label><input id="whipUrl" type="url" placeholder="https://…/whip"></div>
+        <div class="field"><label for="whipTok">Bearer token (if any)</label><input id="whipTok" type="password" autocomplete="off"></div>
+        <button class="btn primary golive" data-live="whip">Go live</button>
+      </div>
+    </div>
+  </section>
+</aside>
+
+<div class="stage" id="stage">
+  <canvas id="program"></canvas>
+  <div class="empty" id="empty">
+    <div>
+      <svg viewBox="0 0 320 260" aria-hidden="true">
+        <rect x="8" y="8" width="304" height="244" rx="14" fill="none" stroke="#2a3034" stroke-width="2" stroke-dasharray="8 8"/>
+        <g stroke="#3b4449" stroke-width="5" stroke-linecap="round" fill="none">
+          <path d="M160 70 L160 140 M160 140 L136 210 M160 140 L184 210 M160 88 L118 118 L96 96 M160 88 L202 118 L226 96"/>
+        </g>
+        <circle cx="160" cy="52" r="16" fill="none" stroke="#3b4449" stroke-width="5"/>
+        <g fill="#00c853">
+          <circle cx="160" cy="88" r="6"/><circle cx="160" cy="140" r="6"/><circle cx="118" cy="118" r="5"/><circle cx="202" cy="118" r="5"/>
+          <circle cx="96" cy="96" r="5"/><circle cx="226" cy="96" r="5"/><circle cx="136" cy="210" r="5"/><circle cx="184" cy="210" r="5"/>
+        </g>
+        <g fill="#00c853" opacity=".55"><circle cx="90" cy="88" r="2.5"/><circle cx="86" cy="94" r="2.5"/><circle cx="88" cy="101" r="2.5"/><circle cx="232" cy="88" r="2.5"/><circle cx="236" cy="94" r="2.5"/><circle cx="234" cy="101" r="2.5"/></g>
+      </svg>
+      <h1 id="emptyTitle">Your character, standing in for you</h1>
+      <p id="emptyText">Upload a model to begin — drop it anywhere on this screen.</p>
+    </div>
+  </div>
+  <div class="hud hide" id="hud">
+    <span class="tag" id="hBody">Body</span><span class="tag" id="hHands">Hands</span><span class="tag" id="hFace">Face</span><span class="tag plain" id="hFps">— fps</span>
+  </div>
+  <div class="viewbtns" id="viewBtns">
+    <button class="btn" data-cam="front">Front</button><button class="btn" data-cam="side">Side</button><button class="btn" data-cam="three">¾</button>
+  </div>
+  <div class="dots"><div class="recdot" id="liveDot">LIVE 00:00</div><div class="recdot" id="recDot">REC 00:00</div></div>
+  <div class="countdown" id="countdown"></div>
+  <div class="status" id="status"></div>
+  <div class="vidbar" id="vidbar">
+    <button class="btn" id="vPlay">Pause</button>
+    <input type="range" id="vSeek" min="0" max="1000" value="0" aria-label="Seek">
+    <span id="vTime">0:00 / 0:00</span>
+  </div>
+  <div class="tip" id="tip"></div>
+</div>
+</main>
+<div id="toast"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+/* ================= constants ================= */
+const MP_VER = '0.10.14';
+const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/vision_bundle.mjs`;
+const MP_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/wasm`;
+const MG = 'https://storage.googleapis.com/mediapipe-models';
+const POSE_URL = q => `${MG}/pose_landmarker/pose_landmarker_${q}/float16/latest/pose_landmarker_${q}.task`;
+const HAND_URL = `${MG}/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task`;
+const FACE_URL = `${MG}/face_landmarker/face_landmarker/float16/latest/face_landmarker.task`;
+
+const SIDES = ['left', 'right'];
+const FINGERS = ['Thumb', 'Index', 'Middle', 'Ring', 'Little'];
+const FINGER_LM = { Thumb: 1, Index: 5, Middle: 9, Ring: 13, Little: 17 };
+const LM = {
+  left: { sh: 11, el: 13, wr: 15, pinky: 17, index: 19, hip: 23, knee: 25, ank: 27, toe: 31 },
+  right: { sh: 12, el: 14, wr: 16, pinky: 18, index: 20, hip: 24, knee: 26, ank: 28, toe: 32 }
+};
+const cap = s => s[0].toUpperCase() + s.slice(1);
+const SLOT_GROUPS = [
+  ['Body', ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head', 'jaw']],
+  ...SIDES.map(s => [cap(s) + ' arm', [s + 'Shoulder', s + 'UpperArm', s + 'LowerArm', s + 'Hand']]),
+  ...SIDES.map(s => [cap(s) + ' leg', [s + 'UpperLeg', s + 'LowerLeg', s + 'Foot', s + 'Toes']]),
+  ...SIDES.map(s => [cap(s) + ' fingers', FINGERS.flatMap(f => [1, 2, 3, 'Tip'].map(k => s + f + k))])
+];
+const CHILD = { neck: 'head' }, PARENT = {};
+for (const s of SIDES) {
+  Object.assign(CHILD, { [s + 'UpperArm']: s + 'LowerArm', [s + 'LowerArm']: s + 'Hand', [s + 'Hand']: s + 'Middle1',
+    [s + 'UpperLeg']: s + 'LowerLeg', [s + 'LowerLeg']: s + 'Foot', [s + 'Foot']: s + 'Toes' });
+  Object.assign(PARENT, { [s + 'LowerArm']: s + 'UpperArm', [s + 'Hand']: s + 'LowerArm', [s + 'LowerLeg']: s + 'UpperLeg', [s + 'Foot']: s + 'LowerLeg' });
+  for (const f of FINGERS) {
+    CHILD[s + f + 1] = s + f + 2; CHILD[s + f + 2] = s + f + 3; CHILD[s + f + 3] = s + f + 'Tip';
+    PARENT[s + f + 1] = s + 'Hand'; PARENT[s + f + 2] = s + f + 1; PARENT[s + f + 3] = s + f + 2;
+  }
+}
+const pretty = s => s.replace(/([A-Z0-9])/g, ' $1').replace(/^./, c => c.toUpperCase()).replace(/\s+/g, ' ').trim().replace(/ (\w)/g, (m, c) => ' ' + c.toLowerCase());
+
+/* ================= dom helpers ================= */
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const sub = (a, b) => a.clone().sub(b), mid = (a, b) => a.clone().add(b).multiplyScalar(0.5);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const smoothstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+let toastT;
+function toast(msg, err = false, ms = 3600) { const t = $('#toast'); t.textContent = msg; t.className = err ? 'err' : ''; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => t.style.display = 'none', ms); }
+function status(msg) { const s = $('#status'); if (!msg) { s.style.display = 'none'; return; } s.textContent = msg; s.style.display = 'block'; }
+window.addEventListener('error', e => toast('Error: ' + (e.message || e), true, 6000));
+window.addEventListener('unhandledrejection', e => toast('Error: ' + (e.reason?.message || e.reason), true, 6000));
+
+/* ================= three setup ================= */
+const stage = $('#stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const hemi = new THREE.HemisphereLight(0xffffff, 0x3a3a3a, 0.9); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 4); scene.add(sun);
+const grid = new THREE.GridHelper(6, 24, 0x2c3337, 0x1a1f22); scene.add(grid);
+const editCam = new THREE.PerspectiveCamera(32, 1, 0.01, 200);
+editCam.position.set(0, 1.0, 4.4);
+const controls = new OrbitControls(editCam, renderer.domElement);
+controls.target.set(0, 0.88, 0); controls.enableDamping = true; controls.update();
+const capCam = new THREE.PerspectiveCamera(45, 16 / 9, 0.05, 200);
+const avatar = new THREE.Group(); avatar.name = 'StandInAvatar'; scene.add(avatar);
+const markerGroup = new THREE.Group(); scene.add(markerGroup);
+const draco = new DRACOLoader(); draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+
+/* ================= state ================= */
+const S = {
+  step: 1, holder: null, orient: null, raw: null, vrm: null, name: '', isRigged: false,
+  map: {}, restLocal: new Map(), R: null, ready: false,
+  joints: {}, fingers: true, built: false, rigGroup: null, staticHolder: null,
+  morphs: new Map(), weightsOn: false,
+  // capture
+  src: 'cam', video: null, camVideo: null, fileVideo: null, camStream: null,
+  view: 'replace', mirror: true, W: 1280, H: 720, tasks: null, tasksLoading: false,
+  lastVT: -1, lastTs: 0, frame: null, lastSeen: 0, hasMask: false, maskInvert: false,
+  recording: false, recorder: null, takes: [], motion: null, recStart: 0, renderingFull: false, scanning: false,
+  countdownEnd: 0, fps: 0, fpsAcc: 0, fpsN: 0, fpsT: 0
+};
+const P = { size: 1.05, offX: 0, offY: 0, smooth: 0.5, pitch: 0, light: 1.2, fov: 45, pad: 14, sharp: 4 };
+
+/* ================= step navigation ================= */
+function setStep(n) {
+  if (n === S.step) return;
+  const prev = S.step; S.step = n;
+  $$('.steps button').forEach(b => b.classList.toggle('on', +b.dataset.step === n));
+  $$('.pane').forEach(p => p.classList.toggle('on', +p.dataset.pane === n));
+  const cap3 = n >= 3, wasCap = prev >= 3;
+  $('#program').style.display = cap3 ? 'block' : 'none';
+  renderer.domElement.style.display = cap3 ? 'none' : 'block';
+  $('#viewBtns').style.display = cap3 ? 'none' : 'flex';
+  $('#hud').classList.toggle('hide', !cap3);
+  grid.visible = !cap3;
+  markerGroup.visible = n === 2 && !S.isRigged && !S.built;
+  if (wasCap && !cap3) leaveCapture();
+  if (cap3 && !wasCap) enterCapture();
+  if (!cap3) { resetAvatarTransform(); restoreRest(); resize(); }
+  updateEmpty();
+}
+$$('.steps button').forEach(b => b.onclick = () => !b.disabled && setStep(+b.dataset.step));
+function enableSteps() {
+  $('.steps [data-step="2"]').disabled = !S.raw;
+  $('.steps [data-step="3"]').disabled = !S.ready;
+  $('.steps [data-step="4"]').disabled = !S.ready;
+  $('#next2').disabled = !S.ready;
+}
+function updateEmpty() {
+  const e = $('#empty');
+  if (S.step >= 3) {
+    const has = (S.video && S.video.readyState >= 2) || (S.step === 4 && OUT.layout === 'game' && !!S.gameStream);
+    e.style.display = has ? 'none' : 'grid';
+    $('#emptyTitle').textContent = 'Step into frame';
+    $('#emptyText').textContent = S.src === 'cam' ? 'Press “Start camera”, or switch to a video file.' : 'Choose a video file on the left.';
+  } else {
+    e.style.display = S.raw ? 'none' : 'grid';
+    $('#emptyTitle').textContent = 'Your character, standing in for you';
+    $('#emptyText').textContent = 'Upload a model to begin — drop it anywhere on this screen.';
+  }
+}
+
+/* ================= model loading ================= */
+let vrmLib = null;
+async function getVRMLib() { if (vrmLib !== null) return vrmLib; try { vrmLib = await import('@pixiv/three-vrm'); } catch (e) { console.warn('three-vrm unavailable', e); vrmLib = false; } return vrmLib; }
+
+async function loadFiles(list) {
+  const files = [...list];
+  const main = files.find(f => /\.(glb|gltf|vrm|fbx|obj)$/i.test(f.name));
+  if (!main) return toast('Pick a .glb, .gltf, .vrm, .fbx or .obj file.', true);
+  status('Loading ' + main.name + '…');
+  const urls = new Map(files.map(f => [f.name, URL.createObjectURL(f)]));
+  const manager = new THREE.LoadingManager();
+  manager.setURLModifier(u => { const n = decodeURIComponent(u.split(/[\\/]/).pop().split('?')[0]); return urls.get(n) || u; });
+  const ext = main.name.split('.').pop().toLowerCase();
+  const url = urls.get(main.name);
+  try {
+    let obj, vrm = null;
+    if (ext === 'fbx') obj = await new FBXLoader(manager).loadAsync(url);
+    else if (ext === 'obj') obj = await new OBJLoader(manager).loadAsync(url);
+    else {
+      const loader = new GLTFLoader(manager);
+      loader.setDRACOLoader(draco); loader.setMeshoptDecoder(MeshoptDecoder);
+      const lib = await getVRMLib();
+      if (lib) loader.register(p => new lib.VRMLoaderPlugin(p));
+      const gltf = await loader.loadAsync(url);
+      obj = gltf.scene; vrm = gltf.userData.vrm || null;
+      if (vrm && lib) { lib.VRMUtils.rotateVRM0(vrm); if (vrm.humanoid) vrm.humanoid.autoUpdateHumanBones = false; }
+    }
+    setModel(obj, main.name, vrm);
+  } catch (e) { console.error(e); toast('Could not load that model: ' + e.message, true, 7000); }
+  status('');
+}
+
+function disposeAvatarChildren() { while (avatar.children.length) avatar.remove(avatar.children[0]); }
+
+function setModel(obj, name, vrm = null) {
+  disposeAvatarChildren();
+  resetAvatarTransform();
+  MO.stk = null; S.raw = obj; S.name = name; S.vrm = vrm; S.built = false; S.rigGroup = null; S.ready = false; S.map = {}; S.weightsOn = false;
+  $('#showWeights').checked = false;
+  S.orient = new THREE.Group(); S.orient.add(obj);
+  S.holder = new THREE.Group(); S.holder.add(S.orient);
+  avatar.add(S.holder);
+  obj.traverse(o => { if (o.isMesh) { o.frustumCulled = false; const mats = Array.isArray(o.material) ? o.material : [o.material]; mats.forEach(m => { if (m && m.map) m.map.colorSpace = THREE.SRGBColorSpace; }); } });
+  normalize();
+  const skinned = []; obj.traverse(o => o.isSkinnedMesh && skinned.push(o));
+  S.isRigged = skinned.length > 0;
+  let verts = 0, meshes = 0, morphs = 0, bones = new Set();
+  obj.traverse(o => { if (o.isMesh) { meshes++; verts += o.geometry.attributes.position.count; morphs = Math.max(morphs, Object.keys(o.morphTargetDictionary || {}).length); } if (o.isBone) bones.add(o); });
+  $('#modelCard').classList.remove('hide');
+  $('#orientGroup').classList.remove('hide');
+  $('#next1Group').classList.remove('hide');
+  $('#modelName').textContent = name;
+  $('#modelChips').innerHTML = [
+    `<span class="chip">${meshes} mesh${meshes === 1 ? '' : 'es'}</span>`,
+    `<span class="chip">${verts.toLocaleString()} vertices</span>`,
+    S.isRigged ? `<span class="chip ok">Rigged · ${bones.size} bones</span>` : `<span class="chip warn">No skeleton — will auto-rig</span>`,
+    vrm ? `<span class="chip ok">VRM</span>` : '',
+    morphs ? `<span class="chip ok">${morphs} blendshapes</span>` : ''
+  ].join('');
+  $('#rigidParts').checked = !S.isRigged && meshes >= 6;
+  setupRigStep(); indexMorphs();
+  enableSteps(); updateEmpty();
+  frameEditCam('front');
+}
+
+function normalize() {
+  const h = S.holder; h.position.set(0, 0, 0); h.scale.setScalar(1); h.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(h, true);
+  const size = box.getSize(V()), c = box.getCenter(V());
+  const height = size.y || 1, s = 1.7 / height;
+  h.scale.setScalar(s);
+  h.position.set(-c.x * s, -box.min.y * s, -c.z * s);
+  h.updateMatrixWorld(true);
+}
+function rotateModel(axis, ang) {
+  if (!S.orient) return;
+  if (S.built) { toast('Edit joints first, then rotate.'); return; }
+  const q = new THREE.Quaternion().setFromAxisAngle(axis, ang);
+  S.orient.quaternion.premultiply(q); normalize();
+  S.R = null; if (!S.isRigged) guessJoints(); else captureRestLocal();
+}
+$('#turn90').onclick = () => rotateModel(V(0, 1, 0), Math.PI / 2);
+$('#turn180').onclick = () => rotateModel(V(0, 1, 0), Math.PI);
+$('#standUp').onclick = () => rotateModel(V(1, 0, 0), -Math.PI / 2);
+
+/* drag & drop + inputs */
+$('#modelFile').onchange = e => e.target.files.length && loadFiles(e.target.files);
+const dropEl = $('#drop');
+['dragover', 'dragenter'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); if (S.step < 3) dropEl.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); dropEl.classList.remove('over'); }));
+document.addEventListener('drop', e => {
+  const fs = [...(e.dataTransfer?.files || [])]; if (!fs.length) return;
+  if (S.step >= 3 && fs[0].type.startsWith('video/')) { setSource('file'); loadVideoFile(fs[0]); return; }
+  if (S.step < 3) { setStep(1); loadFiles(fs); }
+});
+$('#next1').onclick = () => setStep(2);
+
+/* ================= test mannequin ================= */
+function buildMannequin() {
+  const parts = [];
+  const cap2 = (a, b, r) => { const len = a.distanceTo(b); const g = new THREE.CapsuleGeometry(r, Math.max(0.001, len), 6, 14);
+    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), sub(b, a).normalize())); const m = mid(a, b); g.translate(m.x, m.y, m.z); parts.push(g); };
+  const sph = (p, r, sx = 1, sy = 1, sz = 1) => { const g = new THREE.SphereGeometry(r, 20, 14); g.scale(sx, sy, sz); g.translate(p.x, p.y, p.z); parts.push(g); };
+  const box = (p, w, h, d) => { const g = new THREE.BoxGeometry(w, h, d, 2, 2, 2); g.translate(p.x, p.y, p.z); parts.push(g); };
+  sph(V(0, 0.97, 0), 0.13, 1.25, 0.8, 0.9);
+  { const g = new THREE.CapsuleGeometry(0.14, 0.3, 6, 16); g.scale(1.22, 1, 0.78); g.translate(0, 1.17, 0); parts.push(g); }
+  cap2(V(-0.17, 1.4, 0), V(0.17, 1.4, 0), 0.07);
+  cap2(V(0, 1.42, 0), V(0, 1.52, 0), 0.045);
+  sph(V(0, 1.6, 0.01), 0.105, 0.9, 1.1, 1);
+  sph(V(0, 1.6, 0.1), 0.022);
+  for (const s of [1, -1]) {
+    cap2(V(s * 0.2, 1.4, 0), V(s * 0.46, 1.4, 0), 0.05);
+    cap2(V(s * 0.46, 1.4, 0), V(s * 0.71, 1.4, 0), 0.042);
+    box(V(s * 0.765, 1.4, 0), 0.09, 0.03, 0.09);
+    [[0.032, 0.89], [0.011, 0.9], [-0.011, 0.885], [-0.032, 0.865]].forEach(([z, x]) => cap2(V(s * 0.81, 1.4, z), V(s * x, 1.4, z), 0.0105));
+    cap2(V(s * 0.74, 1.392, 0.045), V(s * 0.8, 1.385, 0.095), 0.013);
+    cap2(V(s * 0.095, 0.93, 0), V(s * 0.1, 0.5, 0), 0.07);
+    cap2(V(s * 0.1, 0.5, 0), V(s * 0.1, 0.09, 0), 0.055);
+    box(V(s * 0.1, 0.04, 0.05), 0.09, 0.06, 0.22);
+  }
+  const geo = mergeGeometries(parts);
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xd9d5cc, roughness: 0.55, metalness: 0 }));
+  mesh.name = 'Mannequin';
+  const g = new THREE.Group(); g.add(mesh); return g;
+}
+$('#mannequin').onclick = () => setModel(buildMannequin(), 'Test mannequin');
+
+/* ================= rest pose bookkeeping ================= */
+function allBones() { const b = []; avatar.traverse(o => o.isBone && b.push(o)); return b; }
+function captureRestLocal() { S.restLocal = new Map(allBones().map(b => [b, b.quaternion.clone()])); }
+function restoreRest() { for (const [b, q] of S.restLocal) b.quaternion.copy(q); }
+function resetAvatarTransform() { avatar.position.set(0, 0, 0); avatar.quaternion.identity(); avatar.scale.setScalar(1); avatar.visible = true; avatar.updateMatrixWorld(true); }
+
+/* ================= rig step ================= */
+function setupRigStep() {
+  $('#rigAuto').classList.toggle('hide', S.isRigged);
+  $('#rigMapped').classList.toggle('hide', !S.isRigged);
+  markerGroup.clear();
+  if (S.isRigged) {
+    captureRestLocal();
+    S.map = S.vrm && vrmLib ? mapFromVRM(S.vrm) : autoMap(allBones());
+    renderMapUI();
+    validateMap();
+  } else {
+    $('#jointTools').classList.remove('hide'); $('#builtTools').classList.add('hide');
+    guessJoints();
+  }
+}
+function validateMap() {
+  const need = ['hips', 'leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm'];
+  const miss = need.filter(s => !S.map[s]);
+  S.ready = miss.length === 0; S.R = null;
+  if (S.isRigged) {
+    const n = Object.keys(S.map).length;
+    $('#mapMsg').innerHTML = miss.length
+      ? `Matched ${n} slots, but these are missing: <b>${miss.map(pretty).join(', ')}</b>. Pick them below.`
+      : `Matched ${n} humanoid slots to this skeleton. Check them below — anything wrong can be changed.`;
+  }
+  enableSteps();
+}
+
+/* ---- automatic bone-name matching ---- */
+function tokens(name) {
+  return name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+}
+const JUNK = new Set(['j', 'bip', 'bip01', 'bip001', 'c', 'def', 'org', 'mch', 'cc', 'base', 'armature', 'rig', 'character', 'jnt', 'joint', 'bn', 'sk', 'b', 'bone', 'skeleton', 'root']);
+const PARTS = {
+  Shoulder: ['shoulder', 'clavicle', 'collar', 'collarbone', 'shldr'],
+  UpperArm: ['arm', 'upperarm', 'uparm', 'humerus'],
+  LowerArm: ['forearm', 'lowerarm', 'elbow', 'loarm'],
+  Hand: ['hand', 'wrist'],
+  UpperLeg: ['upleg', 'upperleg', 'thigh', 'upperthigh'],
+  LowerLeg: ['leg', 'lowerleg', 'shin', 'calf', 'knee', 'loleg'],
+  Foot: ['foot', 'ankle'],
+  Toes: ['toebase', 'toe', 'toes', 'ball', 'toe0', 'toes0', 'toe01']
+};
+function depthOf(o) { let d = 0; while (o.parent) { d++; o = o.parent; } return d; }
+function autoMap(bones) {
+  const map = {}; const info = bones.map(b => {
+    const t = tokens(b.name).filter(x => !/^mixamorig\d*$/.test(x));
+    const side = t.some(x => x === 'left' || x === 'l') ? 'left' : t.some(x => x === 'right' || x === 'r') ? 'right' : null;
+    const core = t.filter(x => !['left', 'right', 'l', 'r'].includes(x) && !JUNK.has(x)).join('');
+    return { b, side, core, d: depthOf(b) };
+  }).sort((a, b) => a.d - b.d);
+  const put = (slot, b) => { if (!map[slot]) map[slot] = b; };
+  for (const i of info) {
+    if (!i.side) {
+      if (['hips', 'hip', 'pelvis', 'lowertorso'].includes(i.core)) put('hips', i.b);
+      else if (/^neck\d*$/.test(i.core)) put('neck', i.b);
+      else if (i.core === 'head') put('head', i.b);
+      else if (['jaw', 'lowerjaw', 'jawbone', 'jaw1', 'jawroot', 'chin'].includes(i.core)) put('jaw', i.b);
+    } else {
+      for (const [part, names] of Object.entries(PARTS)) if (names.includes(i.core)) put(i.side + part, i.b);
+    }
+  }
+  // spine chain
+  const sp = info.filter(i => !i.side && /^(spine\d*|chest\d*|upperchest|abdomen\d*|torso|uppertorso)$/.test(i.core));
+  const chestNamed = sp.find(i => i.core === 'chest' || i.core === 'uppertorso');
+  const upper = sp.find(i => i.core === 'upperchest');
+  const others = sp.filter(i => i !== chestNamed && i !== upper);
+  if (others[0]) map.spine = others[0].b;
+  if (chestNamed) map.chest = chestNamed.b; else if (others.length > 1) map.chest = others[others.length - 1].b;
+  if (upper) map.upperChest = upper.b;
+  // fingers
+  for (const s of SIDES) for (const f of FINGERS) {
+    const re = new RegExp('^(?:hand|f|finger|fingers)?(' + (f === 'Little' ? 'pinky|pinkie|little|lil' : f === 'Middle' ? 'middle|mid' : f.toLowerCase()) + ')');
+    const list = info.filter(i => i.side === s && re.test(i.core) && !/(twist|ik|nub|target|pole)/.test(i.core) && (f === 'Thumb' || !/metacarpal/.test(i.core)));
+    list.slice(0, 3).forEach((i, k) => map[s + f + (k + 1)] = i.b);
+    if (list[3]) map[s + f + 'Tip'] = list[3].b;
+  }
+  // fallback: hips = shallowest bone if missing
+  if (!map.hips && info.length) map.hips = info[0].b;
+  return map;
+}
+function mapFromVRM(vrm) {
+  const map = {}; const h = vrm.humanoid; if (!h) return autoMap(allBones());
+  const g = n => h.getRawBoneNode ? h.getRawBoneNode(n) : h.getBoneNode(n);
+  for (const slot of ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head', 'jaw']) { const b = g(slot); if (b) map[slot] = b; }
+  for (const s of SIDES) {
+    for (const p of ['Shoulder', 'UpperArm', 'LowerArm', 'Hand', 'UpperLeg', 'LowerLeg', 'Foot', 'Toes']) { const b = g(s + p); if (b) map[s + p] = b; }
+    const vn = { Thumb: ['ThumbMetacarpal', 'ThumbProximal', 'ThumbDistal'] };
+    for (const f of FINGERS) {
+      const names = vn[f] || [f + 'Proximal', f + 'Intermediate', f + 'Distal'];
+      names.forEach((n, k) => { const b = g(s + n); if (b) map[s + f + (k + 1)] = b; });
+    }
+  }
+  return map;
+}
+function renderMapUI() {
+  const bones = allBones();
+  const opts = '<option value="">—</option>' + bones.map(b => `<option value="${b.uuid}">${escapeHtml(b.name || '(unnamed)')}</option>`).join('');
+  $('#mapUI').innerHTML = SLOT_GROUPS.map(([title, slots], gi) => {
+    const rows = slots.map(s => `<span class="${S.map[s] ? '' : 'miss'}">${pretty(s)}</span><select data-slot="${s}" aria-label="${pretty(s)}">${opts}</select>`).join('');
+    const got = slots.filter(s => S.map[s]).length;
+    return `<details ${gi < 3 ? 'open' : ''}><summary>${title} <span class="chip ${got ? 'ok' : ''}">${got}/${slots.length}</span></summary><div class="map">${rows}</div></details>`;
+  }).join('');
+  $$('#mapUI select').forEach(sel => {
+    const b = S.map[sel.dataset.slot]; sel.value = b ? b.uuid : '';
+    sel.onchange = () => { const b = bones.find(x => x.uuid === sel.value); if (b) S.map[sel.dataset.slot] = b; else delete S.map[sel.dataset.slot]; restoreRest(); validateMap(); };
+  });
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+$('#forceAuto').onclick = () => {
+  // bake current meshes into a static copy and auto-rig
+  restoreRest(); avatar.updateMatrixWorld(true);
+  const g = new THREE.Group();
+  S.holder.traverse(o => {
+    if (!o.isMesh) return;
+    const geo = o.geometry.clone(); geo.deleteAttribute('skinIndex'); geo.deleteAttribute('skinWeight');
+    if (o.isSkinnedMesh) { // bake current skinned pose
+      const pos = geo.attributes.position, v = V();
+      for (let i = 0; i < pos.count; i++) { o.getVertexPosition(i, v); pos.setXYZ(i, v.x, v.y, v.z); }
+      geo.computeVertexNormals();
+    }
+    geo.applyMatrix4(o.matrixWorld);
+    const m = new THREE.Mesh(geo, o.material); m.name = o.name; g.add(m);
+  });
+  setModel(g, S.name + ' (auto-rig)');
+  setStep(2);
+};
+
+/* ---- joint markers (auto-rig) ---- */
+const CENTER_J = ['hips', 'spine', 'chest', 'neck', 'head', 'headTop', 'jaw', 'chin'];
+const SIDE_J = ['shoulder', 'elbow', 'wrist', 'handTip', 'upLeg', 'knee', 'ankle', 'toe'];
+const FING_J = FINGERS.flatMap(f => [f + 'Base', f + 'Tip']);
+const jointNames = () => [...CENTER_J, ...SIDES.flatMap(s => [...SIDE_J, ...FING_J].map(j => s[0] + '_' + j))];
+const isFingerJ = n => /_(Thumb|Index|Middle|Ring|Little)/.test(n);
+const mirrorName = n => n.startsWith('l_') ? 'r_' + n.slice(2) : n.startsWith('r_') ? 'l_' + n.slice(2) : null;
+
+function collectPositions(maxN = 60000) {
+  avatar.updateMatrixWorld(true);
+  const arr = []; let total = 0;
+  S.holder.traverse(o => { if (o.isMesh) total += o.geometry.attributes.position.count; });
+  const step = Math.max(1, Math.floor(total / maxN));
+  const v = V();
+  S.holder.traverse(o => {
+    if (!o.isMesh) return;
+    const pos = o.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i += step) { v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld); arr.push(v.x, v.y, v.z); }
+  });
+  return new Float32Array(arr);
+}
+
+function guessJoints() {
+  const Pp = collectPositions(); const n = Pp.length / 3; const H = 1.7;
+  const J = {};
+  const zAt = (x, y, r, rx = r) => { let s = 0, c = 0; for (let i = 0; i < n; i++) { if (Math.abs(Pp[i * 3] - x) < rx && Math.abs(Pp[i * 3 + 1] - y) < r) { s += Pp[i * 3 + 2]; c++; } } return c ? s / c : 0; };
+  const meanX = (y0, y1, side, maxAbs) => { let s = 0, c = 0; for (let i = 0; i < n; i++) { const x = Pp[i * 3], y = Pp[i * 3 + 1]; if (y > y0 && y < y1 && x * side > 0.005 && Math.abs(x) < maxAbs) { s += x; c++; } } return c ? s / c : side * 0.06 * H; };
+  for (const [k, f] of [['hips', 0.53], ['spine', 0.62], ['chest', 0.72], ['neck', 0.835], ['head', 0.875]]) J[k] = V(0, f * H, zAt(0, f * H, 0.03 * H, 0.06 * H));
+  J.headTop = V(0, H * 0.995, zAt(0, H * 0.94, 0.03 * H, 0.05 * H));
+  { // jaw hinge + chin from the front of the face
+    let front = J.head.z + 0.06 * H; let got = false;
+    for (let i = 0; i < n; i++) { const x = Pp[i * 3], y = Pp[i * 3 + 1], z = Pp[i * 3 + 2]; if (Math.abs(x) < 0.025 * H && y > 0.86 * H && y < 0.92 * H) { if (!got || z > front) { front = z; got = true; } } }
+    const cz = J.head.z; J.jaw = V(0, 0.905 * H, cz + 0.2 * (front - cz)); J.chin = V(0, 0.865 * H, front - 0.008 * H);
+  }
+  for (const side of [1, -1]) {
+    const p = side > 0 ? 'l_' : 'r_';
+    let tip = null, best = -1e9;
+    for (let i = 0; i < n; i++) { const x = Pp[i * 3] * side, y = Pp[i * 3 + 1]; if (y > 0.35 * H && y < 0.95 * H && x > best) { best = x; tip = V(Pp[i * 3], y, Pp[i * 3 + 2]); } }
+    if (!tip) tip = V(side * 0.45 * H, 0.8 * H, 0);
+    const sx = clamp(0.25 * Math.abs(tip.x), 0.08 * H, 0.14 * H), shY = 0.815 * H;
+    const sh = V(side * sx, shY, zAt(side * sx, shY, 0.04 * H));
+    const el = sh.clone().lerp(tip, 0.38); el.z = zAt(el.x, el.y, 0.025 * H) || el.z;
+    const wr = sh.clone().lerp(tip, 0.76); wr.z = zAt(wr.x, wr.y, 0.02 * H) || wr.z;
+    Object.assign(J, { [p + 'shoulder']: sh, [p + 'elbow']: el, [p + 'wrist']: wr, [p + 'handTip']: tip });
+    const hx = meanX(0.42 * H, 0.48 * H, side, 0.15 * H), kx = meanX(0.27 * H, 0.3 * H, side, 0.15 * H), ax = meanX(0.03 * H, 0.07 * H, side, 0.15 * H);
+    const up = V(hx, 0.5 * H, zAt(hx, 0.5 * H, 0.03 * H)), kn = V(kx, 0.285 * H, zAt(kx, 0.285 * H, 0.02 * H)), an = V(ax, 0.045 * H, zAt(ax, 0.06 * H, 0.015 * H));
+    let maxZ = an.z + 0.06 * H; for (let i = 0; i < n; i++) { if (Pp[i * 3 + 1] < 0.05 * H && Pp[i * 3] * side > 0 && Math.abs(Pp[i * 3] - ax) < 0.06 * H) maxZ = Math.max(maxZ, Pp[i * 3 + 2]); }
+    const toe = V(ax, 0.015 * H, an.z + 0.65 * (maxZ - an.z));
+    Object.assign(J, { [p + 'upLeg']: up, [p + 'knee']: kn, [p + 'ankle']: an, [p + 'toe']: toe });
+    // fingers
+    const dir = sub(tip, wr); const L = dir.length() || 0.1; dir.normalize();
+    const lat = V(0, 0, 1).sub(dir.clone().multiplyScalar(dir.z)).normalize(); const w = 0.55 * L;
+    const fs = { Index: [0.36, 0.95], Middle: [0.12, 1.0], Ring: [-0.12, 0.96], Little: [-0.35, 0.85] };
+    for (const [f, [o, len]] of Object.entries(fs)) {
+      J[p + f + 'Base'] = wr.clone().addScaledVector(dir, 0.47 * L).addScaledVector(lat, o * w);
+      J[p + f + 'Tip'] = wr.clone().addScaledVector(dir, len * L).addScaledVector(lat, o * w * 1.1);
+    }
+    J[p + 'ThumbBase'] = wr.clone().addScaledVector(dir, 0.1 * L).addScaledVector(lat, 0.4 * w).add(V(0, -0.05 * L, 0));
+    J[p + 'ThumbTip'] = wr.clone().addScaledVector(dir, 0.5 * L).addScaledVector(lat, 0.95 * w).add(V(0, -0.06 * L, 0));
+  }
+  if ($('#mirrorEdit').checked) for (const k of Object.keys(J)) if (k.startsWith('l_')) { const m = J[k]; J['r_' + k.slice(2)] = V(-m.x, m.y, m.z); }
+  S.joints = J; buildMarkers();
+}
+
+const MAT = {
+  c: new THREE.MeshBasicMaterial({ color: 0xeef1ec, depthTest: false, transparent: true }),
+  l: new THREE.MeshBasicMaterial({ color: 0x2fd66b, depthTest: false, transparent: true }),
+  r: new THREE.MeshBasicMaterial({ color: 0xff8a5c, depthTest: false, transparent: true }),
+  hi: new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, transparent: true })
+};
+const markerGeo = new THREE.SphereGeometry(1, 16, 12);
+let lineObj = null; const markers = {};
+function boneLinks() {
+  const L = [['hips', 'spine'], ['spine', 'chest'], ['chest', 'neck'], ['neck', 'head'], ['head', 'headTop']];
+  if ($('#addJaw').checked) L.push(['head', 'jaw'], ['jaw', 'chin']);
+  for (const p of ['l_', 'r_']) {
+    L.push(['chest', p + 'shoulder'], [p + 'shoulder', p + 'elbow'], [p + 'elbow', p + 'wrist'], ['hips', p + 'upLeg'], [p + 'upLeg', p + 'knee'], [p + 'knee', p + 'ankle'], [p + 'ankle', p + 'toe']);
+    if (S.fingers) for (const f of FINGERS) L.push([p + 'wrist', p + f + 'Base'], [p + f + 'Base', p + f + 'Tip']);
+    else L.push([p + 'wrist', p + 'handTip']);
+  }
+  return L;
+}
+function buildMarkers() {
+  markerGroup.clear(); for (const k in markers) delete markers[k];
+  for (const name of jointNames()) {
+    if (!S.joints[name]) continue;
+    if (isFingerJ(name) && !S.fingers) continue;
+    if (name.endsWith('handTip') && S.fingers) continue;
+    if ((name === 'jaw' || name === 'chin') && !$('#addJaw').checked) continue;
+    const m = new THREE.Mesh(markerGeo, name.startsWith('l_') ? MAT.l : name.startsWith('r_') ? MAT.r : MAT.c);
+    const r = isFingerJ(name) ? 0.0075 : 0.02; m.scale.setScalar(r); m.userData = { name, r };
+    m.position.copy(S.joints[name]); m.renderOrder = 10; markerGroup.add(m); markers[name] = m;
+  }
+  const g = new THREE.BufferGeometry();
+  lineObj = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x9aa39d, depthTest: false, transparent: true, opacity: 0.8 }));
+  lineObj.renderOrder = 9; markerGroup.add(lineObj); updateLines();
+  markerGroup.visible = S.step === 2;
+}
+function updateLines() {
+  if (!lineObj) return; const pts = [];
+  for (const [a, b] of boneLinks()) if (S.joints[a] && S.joints[b]) pts.push(S.joints[a], S.joints[b]);
+  lineObj.geometry.setFromPoints(pts);
+}
+$('#fingerSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; $$('#fingerSeg button').forEach(x => x.classList.toggle('on', x === b)); S.fingers = b.dataset.v === '1'; buildMarkers(); };
+$('#reguess').onclick = guessJoints;
+$('#addJaw').onchange = buildMarkers;
+$('#sharp').oninput = e => { P.sharp = +e.target.value; $('#sharpO').textContent = P.sharp; };
+
+/* marker dragging (screen-space picking) */
+const ray = new THREE.Raycaster(); let drag = null;
+function ndc(e) { const r = renderer.domElement.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1, px: e.clientX - r.left, py: e.clientY - r.top, w: r.width, h: r.height }; }
+function pickMarker(e) {
+  if (!markerGroup.visible) return null; const n = ndc(e); let best = null, bd = 16;
+  for (const m of Object.values(markers)) { const p = m.position.clone().project(editCam); if (p.z > 1) continue; const sx = (p.x + 1) / 2 * n.w, sy = (1 - p.y) / 2 * n.h; const d = Math.hypot(sx - n.px, sy - n.py) - (isFingerJ(m.userData.name) ? 0 : 3); if (d < bd) { bd = d; best = m; } }
+  return best;
+}
+let hover = null;
+renderer.domElement.addEventListener('pointerdown', e => {
+  if (S.step !== 2) return; const m = pickMarker(e); if (!m) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  controls.enabled = false; renderer.domElement.setPointerCapture(e.pointerId);
+  const nrm = editCam.getWorldDirection(V()).negate();
+  drag = { m, plane: new THREE.Plane().setFromNormalAndCoplanarPoint(nrm, m.position.clone()) };
+}, { capture: true });
+renderer.domElement.addEventListener('pointermove', e => {
+  const tip = $('#tip');
+  if (drag) {
+    const n = ndc(e); ray.setFromCamera(n, editCam); const hit = V();
+    if (ray.ray.intersectPlane(drag.plane, hit)) {
+      const name = drag.m.userData.name; const mir = $('#mirrorEdit').checked;
+      if (mir && CENTER_J.includes(name)) hit.x = 0;
+      S.joints[name].copy(hit); drag.m.position.copy(hit);
+      const mn = mirrorName(name);
+      if (mir && mn && S.joints[mn]) { S.joints[mn].set(-hit.x, hit.y, hit.z); if (markers[mn]) markers[mn].position.copy(S.joints[mn]); }
+      updateLines();
+    }
+    tip.style.display = 'block'; tip.style.left = (e.clientX - stage.getBoundingClientRect().left + 14) + 'px'; tip.style.top = (e.clientY - stage.getBoundingClientRect().top - 10) + 'px';
+    return;
+  }
+  const m = pickMarker(e);
+  if (hover && hover !== m) hover.material = hover.userData.name.startsWith('l_') ? MAT.l : hover.userData.name.startsWith('r_') ? MAT.r : MAT.c;
+  hover = m; renderer.domElement.style.cursor = m ? 'grab' : '';
+  if (m) { m.material = MAT.hi; tip.textContent = jointLabel(m.userData.name); tip.style.display = 'block'; const r = stage.getBoundingClientRect(); tip.style.left = (e.clientX - r.left + 14) + 'px'; tip.style.top = (e.clientY - r.top - 10) + 'px'; }
+  else tip.style.display = 'none';
+});
+renderer.domElement.addEventListener('pointerup', e => { if (drag) { drag = null; controls.enabled = true; try { renderer.domElement.releasePointerCapture(e.pointerId); } catch { } } });
+function jointLabel(n) { const side = n.startsWith('l_') ? 'Left ' : n.startsWith('r_') ? 'Right ' : ''; const j = n.replace(/^[lr]_/, ''); return side + pretty(j).toLowerCase().replace('up leg', 'hip joint').replace('hand tip', 'fingertip'); }
+
+/* ---- build bones + skin weights ---- */
+function buildBones(J, fingers) {
+  const bones = {}, list = [];
+  const mk = (name, pos, parent) => { const b = new THREE.Bone(); b.name = name; b.userData.wp = pos.clone();
+    if (parent) { parent.add(b); b.position.copy(pos).sub(parent.userData.wp); } else b.position.copy(pos);
+    bones[name] = b; list.push(b); return b; };
+  const hips = mk('Hips', J.hips), spine = mk('Spine', J.spine, hips), chest = mk('Chest', J.chest, spine), neck = mk('Neck', J.neck, chest), head = mk('Head', J.head, neck);
+  mk('HeadTop_End', J.headTop, head);
+  if (J.jaw && J.chin && $('#addJaw').checked) { const jw = mk('Jaw', J.jaw, head); mk('Jaw_End', J.chin, jw); }
+  for (const s of SIDES) {
+    const p = s[0] + '_', N = cap(s);
+    const sh = J[p + 'shoulder'];
+    const clav = V(sh.x * 0.18, THREE.MathUtils.lerp(J.chest.y, sh.y, 0.75), THREE.MathUtils.lerp(J.chest.z, sh.z, 0.5));
+    const cl = mk(N + 'Shoulder', clav, chest), ua = mk(N + 'UpperArm', sh, cl), la = mk(N + 'LowerArm', J[p + 'elbow'], ua), hand = mk(N + 'Hand', J[p + 'wrist'], la);
+    if (fingers) for (const f of FINGERS) {
+      const a = J[p + f + 'Base'], t = J[p + f + 'Tip'], fr = f === 'Thumb' ? [0, 0.4, 0.72] : [0, 0.45, 0.75];
+      const b1 = mk(N + f + '1', a.clone().lerp(t, fr[0]), hand), b2 = mk(N + f + '2', a.clone().lerp(t, fr[1]), b1), b3 = mk(N + f + '3', a.clone().lerp(t, fr[2]), b2);
+      mk(N + f + '4', t, b3);
+    } else mk(N + 'Hand_End', J[p + 'handTip'], hand);
+    const ul = mk(N + 'UpperLeg', J[p + 'upLeg'], hips), ll = mk(N + 'LowerLeg', J[p + 'knee'], ul), ft = mk(N + 'Foot', J[p + 'ankle'], ll);
+    const toe = J[p + 'toe'], an = J[p + 'ankle'];
+    const to = mk(N + 'Toes', toe, ft); const fwd = sub(toe, an); fwd.y = 0; mk(N + 'Toes_End', toe.clone().addScaledVector(fwd, 0.5), to);
+  }
+  return { root: hips, bones, list };
+}
+function segmentsFor(rig) {
+  const B = rig.bones, segs = [];
+  const tailOf = b => {
+    const n = b.name;
+    if (n === 'Hips') return B.Spine.userData.wp;
+    if (n === 'Chest') return B.Neck.userData.wp;
+    if (/Hand$/.test(n) && B[n.replace('Hand', 'Middle1')]) return B[n.replace('Hand', 'Middle1')].userData.wp;
+    const c = b.children.find(o => o.isBone); return c ? c.userData.wp : null;
+  };
+  rig.list.forEach((b, i) => { if (/_End$|4$/.test(b.name)) return; const t = tailOf(b); if (!t) return; segs.push({ i, a: b.userData.wp, b: t }); });
+  if (B.Jaw) { // the jaw only claims the lower front of the face
+    const jw = B.Jaw.userData.wp, ch = B.Jaw_End.userData.wp, mouthY = ch.y + 0.55 * (jw.y - ch.y), half = Math.max(0.03, (B.HeadTop_End.userData.wp.y - ch.y) * 0.55), lowY = ch.y - 0.02;
+    const sj = segs.find(q => rig.list[q.i] === B.Jaw); if (sj) sj.f = (x, y, z) => y < mouthY && y > lowY && z > jw.z - 0.005 && Math.abs(x - jw.x) < half;
+  }
+  return segs;
+}
+function distSeg(px, py, pz, s) {
+  const ax = s.a.x, ay = s.a.y, az = s.a.z, bx = s.b.x - ax, by = s.b.y - ay, bz = s.b.z - az;
+  const l2 = bx * bx + by * by + bz * bz || 1e-9; let t = ((px - ax) * bx + (py - ay) * by + (pz - az) * bz) / l2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const dx = px - (ax + bx * t), dy = py - (ay + by * t), dz = pz - (az + bz * t); return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+function computeRadii(allPos, segs) {
+  // two passes: nearest by raw distance, then by normalized distance; radius = median distance of assigned verts
+  const n = allPos.length / 3; let rad = segs.map(() => 1);
+  for (let pass = 0; pass < 2; pass++) {
+    const buckets = segs.map(() => []);
+    for (let v = 0; v < n; v++) {
+      const x = allPos[v * 3], y = allPos[v * 3 + 1], z = allPos[v * 3 + 2]; let bi = 0, bd = 1e9, braw = 0;
+      for (let j = 0; j < segs.length; j++) { if (segs[j].f && !segs[j].f(x, y, z)) continue; const d = distSeg(x, y, z, segs[j]); const dn = d / rad[j]; if (dn < bd) { bd = dn; bi = j; braw = d; } }
+      buckets[bi].push(braw);
+    }
+    rad = buckets.map(b => { if (!b.length) return 0.02; b.sort((p, q) => p - q); return Math.max(0.006, b[Math.floor(b.length * 0.6)]); });
+  }
+  return rad;
+}
+function weightsFor(pos, segs, rad, k) {
+  const n = pos.count, idx = new Uint16Array(n * 4), w = new Float32Array(n * 4);
+  const bd = new Float32Array(4), bi = new Int32Array(4);
+  for (let v = 0; v < n; v++) {
+    const x = pos.getX(v), y = pos.getY(v), z = pos.getZ(v); bd.fill(1e9); bi.fill(0);
+    for (let j = 0; j < segs.length; j++) {
+      if (segs[j].f && !segs[j].f(x, y, z)) continue;
+      const d = distSeg(x, y, z, segs[j]) / rad[j] + 1e-4;
+      if (d < bd[3]) { let q = 3; while (q > 0 && d < bd[q - 1]) { bd[q] = bd[q - 1]; bi[q] = bi[q - 1]; q--; } bd[q] = d; bi[q] = j; }
+    }
+    let sum = 0; const ws = [0, 0, 0, 0];
+    for (let q = 0; q < 4; q++) { if (bd[q] > 1e8) continue; ws[q] = 1 / Math.pow(bd[q] / bd[0], k); sum += ws[q]; }
+    for (let q = 0; q < 4; q++) { idx[v * 4 + q] = segs[bi[q]].i; w[v * 4 + q] = sum ? ws[q] / sum : (q === 0 ? 1 : 0); }
+  }
+  return { idx, w };
+}
+function bakeGeo(o) {
+  const g = o.geometry.clone();
+  for (const k of Object.keys(g.attributes)) { const a = g.attributes[k]; if (a.isInterleavedBufferAttribute) g.setAttribute(k, a.clone()); }
+  g.deleteAttribute('skinIndex'); g.deleteAttribute('skinWeight');
+  const m = o.matrixWorld; g.applyMatrix4(m);
+  if (g.morphAttributes.position) { const lin = new THREE.Matrix4().extractRotation(m).multiplyScalar(1); const sc = V().setFromMatrixScale(m); lin.scale(sc);
+    g.morphAttributes.position.forEach(a => { if (g.morphTargetsRelative) a.applyMatrix4(lin); else a.applyMatrix4(m); }); }
+  if (g.morphAttributes.normal) { const nm = new THREE.Matrix3().getNormalMatrix(m); g.morphAttributes.normal.forEach(a => a.applyNormalMatrix(nm)); }
+  if (!g.attributes.normal) g.computeVertexNormals();
+  return g;
+}
+
+$('#buildRig').onclick = () => { status('Rigging… this can take a few seconds on big meshes'); setTimeout(() => { try { autoRig(); } catch (e) { console.error(e); toast('Rigging failed: ' + e.message, true, 7000); } status(''); }, 40); };
+function autoRig() {
+  resetAvatarTransform(); avatar.updateMatrixWorld(true);
+  const rig = buildBones(S.joints, S.fingers);
+  const segs = segmentsFor(rig);
+  const meshes = []; S.holder.traverse(o => o.isMesh && meshes.push(o));
+  const geos = meshes.map(bakeGeo);
+  // radii from a subsample of all vertices
+  const sample = []; const total = geos.reduce((a, g) => a + g.attributes.position.count, 0); const step = Math.max(1, Math.floor(total / 40000));
+  geos.forEach(g => { const p = g.attributes.position; for (let i = 0; i < p.count; i += step) sample.push(p.getX(i), p.getY(i), p.getZ(i)); });
+  const rad = computeRadii(new Float32Array(sample), segs);
+  const group = new THREE.Group(); group.name = 'AutoRig'; group.add(rig.root);
+  const rigid = $('#rigidParts').checked;
+  const skins = geos.map((g, mi) => {
+    let { idx, w } = weightsFor(g.attributes.position, segs, rad, P.sharp);
+    if (rigid) { // whole piece follows the most common dominant bone
+      const votes = new Map(); for (let v = 0; v < idx.length / 4; v++) votes.set(idx[v * 4], (votes.get(idx[v * 4]) || 0) + 1);
+      const top = [...votes].sort((a, b) => b[1] - a[1])[0][0]; idx.fill(0); w.fill(0); for (let v = 0; v < idx.length / 4; v++) { idx[v * 4] = top; w[v * 4] = 1; }
+    }
+    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
+    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(w, 4));
+    const src = meshes[mi]; const sm = new THREE.SkinnedMesh(g, src.material); sm.name = src.name || 'Body';
+    sm.frustumCulled = false;
+    if (src.morphTargetDictionary) { sm.morphTargetDictionary = src.morphTargetDictionary; sm.morphTargetInfluences = (src.morphTargetInfluences || []).slice(); }
+    group.add(sm); return sm;
+  });
+  const skeleton = new THREE.Skeleton(rig.list);
+  group.updateMatrixWorld(true); skins.forEach(sm => sm.bind(skeleton));
+  S.staticHolder = S.holder; avatar.remove(S.holder); avatar.add(group); S.rigGroup = group; S.built = true;
+  // slot map
+  const B = rig.bones, map = { hips: B.Hips, spine: B.Spine, chest: B.Chest, neck: B.Neck, head: B.Head };
+  if (B.Jaw) map.jaw = B.Jaw; MO.stk = null;
+  for (const s of SIDES) { const N = cap(s);
+    for (const p of ['Shoulder', 'UpperArm', 'LowerArm', 'Hand', 'UpperLeg', 'LowerLeg', 'Foot', 'Toes']) map[s + p] = B[N + p];
+    if (S.fingers) for (const f of FINGERS) { [1, 2, 3].forEach(k => map[s + f + k] = B[N + f + k]); map[s + f + 'Tip'] = B[N + f + '4']; } }
+  S.map = map; S.skins = skins; S.weightColors = null;
+  markerGroup.visible = false;
+  $('#jointTools').classList.add('hide'); $('#builtTools').classList.remove('hide');
+  $('#rigChips').innerHTML = `<span class="chip ok">Rig built · ${rig.list.length} bones</span>${B.Jaw ? '<span class="chip ok">jaw</span>' : ''}<span class="chip">${skins.length} skinned mesh${skins.length === 1 ? '' : 'es'}</span>${rigid ? '<span class="chip">rigid parts</span>' : ''}`;
+  $('#autoMsg').textContent = 'Done. Watch the preview to check the bends — if something pulls wrong, edit the joints and build again.';
+  captureRestLocal(); validateMap(); indexMorphs();
+}
+$('#editJoints').onclick = () => {
+  if (!S.staticHolder) return; setWeights(false); $('#showWeights').checked = false;
+  avatar.remove(S.rigGroup); avatar.add(S.holder = S.staticHolder); S.built = false; S.ready = false; S.map = {};
+  $('#jointTools').classList.remove('hide'); $('#builtTools').classList.add('hide');
+  $('#autoMsg').textContent = 'Drag any dot to fix it, then build again.';
+  markerGroup.visible = true; enableSteps();
+};
+function setWeights(on) {
+  if (!S.skins) return; S.weightsOn = on;
+  if (on && !S.weightColors) {
+    const nb = S.skins[0].skeleton.bones.length;
+    const pal = Array.from({ length: nb }, (_, i) => new THREE.Color().setHSL((i * 0.618) % 1, 0.75, 0.55));
+    S.weightColors = new THREE.MeshBasicMaterial({ vertexColors: true });
+    S.skins.forEach(sm => { const g = sm.geometry, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, col = new Float32Array(si.count * 3);
+      for (let v = 0; v < si.count; v++) { for (let q = 0; q < 4; q++) { const c = pal[si.getComponent(v, q)], ww = sw.getComponent(v, q); col[v * 3] += c.r * ww; col[v * 3 + 1] += c.g * ww; col[v * 3 + 2] += c.b * ww; } }
+      g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); sm.userData.mat = sm.material; });
+  }
+  S.skins.forEach(sm => sm.material = on ? S.weightColors : sm.userData.mat || sm.material);
+}
+$('#showWeights').onchange = e => setWeights(e.target.checked);
+$('#next2').onclick = () => setStep(3);
+$('#focusL').onclick = () => focusOn('l_wrist');
+$('#focusR').onclick = () => focusOn('r_wrist');
+function focusOn(j) { const p = S.joints[j]; if (!p) return; controls.target.copy(p); editCam.position.copy(p).add(V(0, 0.12, 0.5)); controls.update(); }
+$$('#viewBtns [data-cam]').forEach(b => b.onclick = () => frameEditCam(b.dataset.cam));
+function frameEditCam(k) {
+  controls.target.set(0, 0.88, 0);
+  const d = 4.4; editCam.position.copy(k === 'side' ? V(d, 1.0, 0) : k === 'three' ? V(d * 0.7, 1.15, d * 0.7) : V(0, 1.0, d)); controls.update();
+}
+
+/* ---- face/morph index ---- */
+const normMorph = s => s.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/left$/, 'l').replace(/right$/, 'r');
+function indexMorphs() {
+  S.morphs = new Map();
+  avatar.traverse(o => { if (o.isMesh && o.morphTargetDictionary) for (const [k, i] of Object.entries(o.morphTargetDictionary)) { const n = normMorph(k); if (!S.morphs.has(n)) S.morphs.set(n, []); S.morphs.get(n).push([o, i]); } });
+}
+
+/* ================= retarget solver ================= */
+function frameQ(x, yHint) {
+  const X = x.clone().normalize(); const Z = V().crossVectors(X, yHint).normalize(); const Y = V().crossVectors(Z, X).normalize();
+  return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z));
+}
+function prepareRest() {
+  restoreRest(); resetAvatarTransform(); avatar.updateMatrixWorld(true);
+  const R = { b: {} };
+  for (const [slot, bone] of Object.entries(S.map)) R.b[slot] = { bone, wq: bone.getWorldQuaternion(new THREE.Quaternion()), wp: bone.getWorldPosition(V()), lq: bone.quaternion.clone() };
+  const wp = s => R.b[s]?.wp;
+  const shMid = mid(wp('leftUpperArm'), wp('rightUpperArm')), hips = wp('hips');
+  R.up = sub(shMid, hips).normalize();
+  R.chestFrame = frameQ(sub(wp('leftUpperArm'), wp('rightUpperArm')), R.up);
+  R.hipFrame = wp('leftUpperLeg') && wp('rightUpperLeg') ? frameQ(sub(wp('leftUpperLeg'), wp('rightUpperLeg')), R.up) : R.chestFrame.clone();
+  R.fwd = V(0, 0, 1).applyQuaternion(R.chestFrame);
+  R.avTorso = shMid.distanceTo(hips); R.avShoulder = wp('leftUpperArm').distanceTo(wp('rightUpperArm'));
+  R.hipsPos = hips.clone();
+  for (const slot of Object.keys(R.b)) R.b[slot].dir = restDir(R, slot);
+  R.hand = {};
+  for (const s of SIDES) {
+    const h = R.b[s + 'Hand']; if (!h) continue;
+    const D = h.dir || V(s === 'left' ? 1 : -1, 0, 0);
+    const L = wp(s + 'Index1') && wp(s + 'Little1') ? sub(wp(s + 'Index1'), wp(s + 'Little1')) : R.fwd.clone();
+    R.hand[s] = frameQ(D, L);
+  }
+  S.R = R; return R;
+}
+function restDir(R, slot) {
+  const b = R.b[slot]; let p = null;
+  const c = R.b[CHILD[slot]];
+  if (/Hand$/.test(slot)) { const m = R.b[slot.replace('Hand', 'Middle1')] || R.b[slot.replace('Hand', 'Index1')]; if (m) p = m.wp; }
+  else if (c) p = c.wp;
+  else if (!/Hand$/.test(slot)) { const ch = b.bone.children.find(o => o.isBone); if (ch) p = ch.getWorldPosition(V()); }
+  if (p && p.distanceTo(b.wp) > 1e-5) return sub(p, b.wp).normalize();
+  const par = R.b[PARENT[slot]]; if (par && !/Foot$/.test(slot)) return sub(b.wp, par.wp).normalize();
+  return null;
+}
+const _pq = new THREE.Quaternion(), _wq = new THREE.Quaternion();
+function applyWorld(slot, d, a = 1) {
+  const r = S.R.b[slot]; if (!r || !d) return;
+  _wq.copy(d).multiply(r.wq);
+  r.bone.parent.getWorldQuaternion(_pq);
+  const local = _pq.invert().multiply(_wq);
+  r.bone.quaternion.slerp(local, a);
+}
+function relax(slot, a) { const r = S.R.b[slot]; if (r) r.bone.quaternion.slerp(r.lq, a); }
+function swing(pd, rd, t) { const from = rd.clone().applyQuaternion(pd).normalize(); return new THREE.Quaternion().setFromUnitVectors(from, t.clone().normalize()).multiply(pd); }
+function limb(pd, rd, hint, u, f) {
+  const sw = swing(pd, rd, u); const n = V().crossVectors(u, f); const len = n.length();
+  if (len < 0.12) return sw;
+  const rn = V().crossVectors(rd, hint); if (rn.lengthSq() < 1e-6) return sw;
+  const full = frameQ(u, n).multiply(frameQ(rd, rn).invert());
+  return sw.slerp(full, smoothstep(0.12, 0.4, len));
+}
+const axisQ = (ax, ang) => new THREE.Quaternion().setFromAxisAngle(ax, ang);
+
+function solve(F) {
+  const R = S.R, p = F.pw, a = THREE.MathUtils.lerp(1, 0.3, P.smooth);
+  const hipMid = mid(p[23], p[24]), shMid = mid(p[11], p[12]), up = sub(shMid, hipMid);
+  const dH = frameQ(sub(p[23], p[24]), up).multiply(R.hipFrame.clone().invert());
+  const dC = frameQ(sub(p[11], p[12]), up).multiply(R.chestFrame.clone().invert());
+  applyWorld('hips', dH, a);
+  const chain = ['spine', 'chest', 'upperChest'].filter(s => R.b[s]);
+  chain.forEach((s, i) => applyWorld(s, dH.clone().slerp(dC, (i + 1) / chain.length), a));
+  // head
+  let qHead = null;
+  if (F.face) {
+    const f = F.face; let X = sub(f[454], f[234]); const earX = sub(p[7], p[8]); if (X.dot(earX) < 0) X.negate();
+    qHead = frameQ(X, sub(f[10], f[152]));
+  } else if (F.vis[7] > 0.3 || F.vis[8] > 0.3) {
+    const X = sub(p[7], p[8]), Z = sub(p[0], mid(p[7], p[8])); qHead = frameQ(X, V().crossVectors(Z, X)).multiply(axisQ(V(1, 0, 0), -0.32));
+  }
+  if (qHead) {
+    qHead.multiply(axisQ(V(1, 0, 0), THREE.MathUtils.degToRad(-P.pitch)));
+    const dHd = qHead.multiply(R.chestFrame.clone().invert());
+    if (R.b.neck) applyWorld('neck', dC.clone().slerp(dHd, 0.5), a);
+    applyWorld('head', dHd, a);
+  }
+  // arms + hands + fingers
+  for (const s of SIDES) {
+    const L = LM[s];
+    const ua = R.b[s + 'UpperArm'], la = R.b[s + 'LowerArm'];
+    if (!ua || !la || !ua.dir || !la.dir) continue;
+    const u = sub(p[L.el], p[L.sh]).normalize(), f = sub(p[L.wr], p[L.el]).normalize();
+    const dUA = limb(dC, ua.dir, R.fwd, u, f); applyWorld(s + 'UpperArm', dUA, a);
+    const dLA = swing(dUA, la.dir, f); applyWorld(s + 'LowerArm', dLA, a);
+    const hd = R.b[s + 'Hand']; if (!hd) continue;
+    const hw = F.hands[s];
+    let dHand;
+    if (hw && R.hand[s]) dHand = frameQ(sub(hw[9], hw[0]), sub(hw[5], hw[17])).multiply(R.hand[s].clone().invert());
+    else if (hd.dir) dHand = swing(dLA, hd.dir, sub(mid(p[L.index], p[L.pinky]), p[L.wr]));
+    if (dHand) applyWorld(s + 'Hand', dHand, hw ? a : a * 0.6);
+    for (const fg of FINGERS) {
+      let prev = dHand; const b0 = FINGER_LM[fg];
+      for (let k = 0; k < 3; k++) {
+        const slot = s + fg + (k + 1), r = R.b[slot]; if (!r) break;
+        if (hw && r.dir && prev) { const d = swing(prev, r.dir, sub(hw[b0 + k + 1], hw[b0 + k])); applyWorld(slot, d, a); prev = d; }
+        else relax(slot, 0.15);
+      }
+    }
+  }
+  // legs
+  const mode = $('#legs').value;
+  for (const s of SIDES) {
+    const L = LM[s], ul = R.b[s + 'UpperLeg'], ll = R.b[s + 'LowerLeg'], ft = R.b[s + 'Foot'];
+    if (!ul || !ll || !ul.dir || !ll.dir) continue;
+    const visible = F.vis[L.knee] > 0.55 && F.vis[L.ank] > 0.45;
+    const track = mode === 'on' || (mode === 'auto' && visible);
+    const u = track ? sub(p[L.knee], p[L.hip]).normalize() : V(0, -1, 0), f = track ? sub(p[L.ank], p[L.knee]).normalize() : V(0, -1, 0);
+    const dUL = limb(dH, ul.dir, R.fwd.clone().negate(), u, f); applyWorld(s + 'UpperLeg', dUL, track ? a : 0.2);
+    const dLL = swing(dUL, ll.dir, f); applyWorld(s + 'LowerLeg', dLL, track ? a : 0.2);
+    if (ft && ft.dir) { const t = track && F.vis[L.toe] > 0.4 ? sub(p[L.toe], p[L.ank]) : ft.dir.clone().applyQuaternion(dLL); applyWorld(s + 'Foot', swing(dLL, ft.dir, t), track ? a : 0.2); }
+  }
+}
+function applyShapes(shapes) {
+  const get = n => shapes.get(n) || 0;
+  if (S.morphs.size) for (const [n, v] of shapes) { const list = S.morphs.get(normMorph(n)); if (list) for (const [m, i] of list) m.morphTargetInfluences[i] = v; }
+  const em = S.vrm?.expressionManager;
+  if (em) {
+    const set = (k, v) => { try { em.setValue(k, clamp(v, 0, 1)); } catch { } };
+    set('blinkLeft', get('eyeBlinkLeft') * 1.2); set('blinkRight', get('eyeBlinkRight') * 1.2);
+    set('oh', get('mouthFunnel')); set('ou', get('mouthPucker'));
+    set('happy', (get('mouthSmileLeft') + get('mouthSmileRight')) * 0.5);
+  }
+}
+function fitRoot(F, smooth = true) {
+  const R = S.R, p = F.pw, pi = F.pi, W = S.W, H = S.H;
+  const fov = THREE.MathUtils.degToRad(P.fov), fpx = (H / 2) / Math.tan(fov / 2);
+  const px = i => V(pi[i].x * W, pi[i].y * H, 0);
+  const torsoPx = mid(px(11), px(12)).distanceTo(mid(px(23), px(24))), shPx = px(11).distanceTo(px(12));
+  const tW = sub(mid(p[11], p[12]), mid(p[23], p[24])), sW = sub(p[11], p[12]);
+  const xy = v => Math.hypot(v.x, v.y);
+  let depth = fpx * (xy(tW) + xy(sW)) / Math.max(20, torsoPx + shPx); depth = clamp(depth, 0.3, 25);
+  const scale = (tW.length() + sW.length()) / (R.avTorso + R.avShoulder) * P.size;
+  const hu = (pi[23].x + pi[24].x) / 2, hv = (pi[23].y + pi[24].y) / 2;
+  const ndcX = hu * 2 - 1 + P.offX * 2, ndcY = -(hv * 2 - 1) + P.offY * 2;
+  const th = Math.tan(fov / 2), asp = W / H;
+  const pos = V(ndcX * th * asp * depth, ndcY * th * depth, -depth);
+  const k = smooth ? THREE.MathUtils.lerp(0.8, 0.2, P.smooth) : 1;
+  S.fit = S.fit || { pos: pos.clone(), scale };
+  S.fit.pos.lerp(pos, k); S.fit.scale += (scale - S.fit.scale) * k;
+  avatar.scale.setScalar(S.fit.scale);
+  avatar.position.copy(S.fit.pos).addScaledVector(R.hipsPos, -S.fit.scale);
+}
+
+/* ---- motion preview in rig step ---- */
+function previewPose(t) {
+  const R = S.R; if (!R) return; const id = new THREE.Quaternion();
+  const breath = Math.sin(t * 1.3) * 0.04;
+  applyWorld('hips', axisQ(V(0, 1, 0), Math.sin(t * 0.7) * 0.15));
+  ['spine', 'chest'].forEach(s => applyWorld(s, axisQ(V(1, 0, 0), breath).multiply(axisQ(V(0, 1, 0), Math.sin(t * 0.7) * 0.1))));
+  applyWorld('head', axisQ(V(1, 0, 0), Math.sin(t * 1.1) * 0.25));
+  if (R.b.jaw) { applyJaw(0.5 + 0.5 * Math.sin(t * 5)); }
+  if (R.b.neck) applyWorld('neck', axisQ(V(1, 0, 0), Math.sin(t * 1.1) * 0.1));
+  for (const s of SIDES) {
+    const sg = s === 'left' ? 1 : -1, ua = R.b[s + 'UpperArm'], la = R.b[s + 'LowerArm'];
+    if (!ua?.dir || !la?.dir) continue;
+    const ph = s === 'left' ? 0 : Math.PI;
+    const dUA = axisQ(R.fwd, sg * (Math.sin(t * 1.4 + ph) * 0.7 - 0.2)); applyWorld(s + 'UpperArm', dUA);
+    const bend = (0.5 + 0.5 * Math.sin(t * 2 + ph)) * 1.6;
+    const dLA = axisQ(V(0, 1, 0).applyQuaternion(dUA), -sg * bend).multiply(dUA); applyWorld(s + 'LowerArm', dLA);
+    applyWorld(s + 'Hand', dLA);
+    const curl = (0.5 + 0.5 * Math.sin(t * 2.6)) * 0.55;
+    for (const f of FINGERS) { let prev = dLA; for (let k = 1; k <= 3; k++) { const r = R.b[s + f + k]; if (!r?.dir) break; const ax = V().crossVectors(r.dir, V(0, -1, 0)).normalize().applyQuaternion(prev); const d = axisQ(ax, curl * (f === 'Thumb' ? 0.5 : 1)).multiply(prev); applyWorld(s + f + k, d); prev = d; } }
+    const ul = R.b[s + 'UpperLeg'], ll = R.b[s + 'LowerLeg'];
+    if (ul?.dir && ll?.dir) { const kn = (0.5 + 0.5 * Math.sin(t * 1.4 + ph + 1)) * 0.6; const dUL = axisQ(V(1, 0, 0), -kn * 0.6); applyWorld(s + 'UpperLeg', dUL); applyWorld(s + 'LowerLeg', axisQ(V(1, 0, 0), kn).multiply(dUL)); }
+  }
+}
+
+/* ================= capture: sources ================= */
+const view = document.createElement('canvas'), vctx = view.getContext('2d');
+const prog = $('#program'), pctx = prog.getContext('2d'); prog.width = 1280; prog.height = 720;
+const mkCanvas = (w = 2, h = 2) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return { c, x: c.getContext('2d', { willReadFrequently: false }) }; };
+const proc = mkCanvas(), maskSmall = mkCanvas(), hole = mkCanvas(), fnp = mkCanvas(), plate = mkCanvas(), holeLayer = mkCanvas();
+const pyr = [mkCanvas(), mkCanvas(), mkCanvas(), mkCanvas(), mkCanvas()];
+let maskImg = null;
+
+function setSource(v) {
+  S.src = v; $$('#srcSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  $('#camBox').classList.toggle('hide', v !== 'cam'); $('#fileBox').classList.toggle('hide', v !== 'file');
+  $('#renderFull').classList.toggle('hide', v !== 'file'); $('#plateScan').classList.toggle('hide', v !== 'file');
+  if (v === 'cam') { S.fileVideo?.pause(); S.video = S.camVideo; $('#vidbar').style.display = 'none'; setMirror(true); }
+  else { stopCam(); S.video = S.fileVideo; if (S.fileVideo) { $('#vidbar').style.display = 'flex'; S.fileVideo.play().catch(() => { }); } setMirror(false); }
+  resetPlate(); S.lastVT = -1; updateEmpty();
+}
+$('#srcSeg').onclick = e => { const b = e.target.closest('button'); if (b) setSource(b.dataset.v); };
+function setMirror(on) { S.mirror = on; $('#mirror').checked = on; }
+$('#mirror').onchange = e => S.mirror = e.target.checked;
+
+async function listCams() {
+  try { const ds = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    const sel = $('#camSel'), cur = sel.value; sel.innerHTML = '<option value="">Default camera</option>' + ds.map((d, i) => `<option value="${d.deviceId}">${escapeHtml(d.label || 'Camera ' + (i + 1))}</option>`).join(''); sel.value = cur; } catch { }
+}
+$('#camStart').onclick = startCam;
+$('#camStop').onclick = stopCam;
+$('#camSel').onchange = () => S.camStream && startCam();
+async function startCam() {
+  if (!navigator.mediaDevices?.getUserMedia) { toast('Camera needs a secure page. Open this file in Chrome/Edge, or serve it from http://localhost.', true, 8000); return; }
+  stopCam();
+  try {
+    const id = $('#camSel').value;
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id ? { exact: id } : undefined, width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: false });
+    S.camStream = stream;
+    const v = S.camVideo || document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = stream; S.camVideo = v;
+    await v.play(); listCams();
+    if (S.src === 'cam') { S.video = v; resetPlate(); }
+    ensureTasks(); updateEmpty();
+  } catch (e) { toast('Could not open the camera: ' + e.message, true, 7000); }
+}
+function stopCam() { if (S.camStream) { S.camStream.getTracks().forEach(t => t.stop()); S.camStream = null; } if (S.src === 'cam') { S.video = null; updateEmpty(); } }
+
+$('#videoFile').onchange = e => e.target.files[0] && loadVideoFile(e.target.files[0]);
+function loadVideoFile(file) {
+  const v = S.fileVideo || document.createElement('video');
+  if (v.src) URL.revokeObjectURL(v.src);
+  v.src = URL.createObjectURL(file); v.loop = true; v.playsInline = true; v.crossOrigin = 'anonymous';
+  S.fileVideo = v; hookFileAudio(); v.onloadeddata = () => { if (S.src === 'file') { S.video = v; resetPlate(); updateEmpty(); } };
+  v.play().catch(() => { v.muted = true; v.play().catch(() => { }); });
+  $('#vidbar').style.display = 'flex'; ensureTasks(); setSource('file');
+}
+$('#vPlay').onclick = () => { const v = S.fileVideo; if (!v) return; v.paused ? v.play() : v.pause(); };
+$('#vSeek').oninput = e => { const v = S.fileVideo; if (v && v.duration) v.currentTime = e.target.value / 1000 * v.duration; };
+const fmt = s => { s = Math.max(0, s || 0); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
+function updateVidbar() { const v = S.fileVideo; if (!v || S.src !== 'file') return; $('#vPlay').textContent = v.paused ? 'Play' : 'Pause'; if (v.duration) { $('#vSeek').value = v.currentTime / v.duration * 1000; $('#vTime').textContent = fmt(v.currentTime) + ' / ' + fmt(v.duration); } }
+
+/* ================= capture: tracking models ================= */
+async function ensureTasks() {
+  if (S.tasks || S.tasksLoading) return; S.tasksLoading = true;
+  try {
+    status('Loading tracking models (first time takes a moment)…');
+    const vision = await import(MP_URL);
+    const fileset = await vision.FilesetResolver.forVisionTasks(MP_WASM);
+    const make = async (Cls, opts) => {
+      try { return await Cls.createFromOptions(fileset, { ...opts, baseOptions: { ...opts.baseOptions, delegate: 'GPU' } }); }
+      catch (e) { console.warn('GPU failed, using CPU', e); return await Cls.createFromOptions(fileset, { ...opts, baseOptions: { ...opts.baseOptions, delegate: 'CPU' } }); }
+    };
+    const mkPose = q => make(vision.PoseLandmarker, { baseOptions: { modelAssetPath: POSE_URL(q) }, runningMode: 'VIDEO', numPoses: 1, minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5, outputSegmentationMasks: true });
+    const [pose, hands, face] = await Promise.all([
+      mkPose($('#quality').value),
+      make(vision.HandLandmarker, { baseOptions: { modelAssetPath: HAND_URL }, runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence: 0.5, minTrackingConfidence: 0.5 }),
+      make(vision.FaceLandmarker, { baseOptions: { modelAssetPath: FACE_URL }, runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true })
+    ]);
+    S.tasks = { vision, fileset, pose, hands, face, mkPose };
+    status(''); toast('Tracking ready. Step back so your whole body is in frame.');
+  } catch (e) { console.error(e); status(''); toast('Could not load tracking models — check your internet connection. ' + e.message, true, 9000); }
+  S.tasksLoading = false;
+}
+$('#quality').onchange = async e => { if (!S.tasks) return; status('Switching body model…'); const old = S.tasks.pose; S.tasks.pose = null; try { S.tasks.pose = await S.tasks.mkPose(e.target.value); old.close(); } catch (er) { S.tasks.pose = old; toast(er.message, true); } status(''); };
+
+/* one-euro filter for landmark smoothing */
+class OneEuro { constructor() { this.x = null; } f(x, t, mc, beta) { if (this.x === null) { this.x = x; this.dx = 0; this.t = t; return x; } const dt = Math.max(1e-3, t - this.t); this.t = t; const al = c => 1 / (1 + 1 / (2 * Math.PI * c * dt)); const dx = (x - this.x) / dt; this.dx += al(1) * (dx - this.dx); const c = mc + beta * Math.abs(this.dx); this.x += al(c) * (x - this.x); return this.x; } }
+const filt = new Map();
+function smoothVecs(key, arr, t, comps, mc, beta) {
+  let fs = filt.get(key); if (!fs || fs.length !== arr.length * comps) { fs = Array.from({ length: arr.length * comps }, () => new OneEuro()); filt.set(key, fs); }
+  return arr.map((p, i) => { const o = {}; ['x', 'y', 'z'].slice(0, comps).forEach((k, j) => o[k] = fs[i * comps + j].f(p[k], t, mc, beta)); o.visibility = p.visibility; return o; });
+}
+const toV = (l, sx = 1, sy = 1, sz = 1) => V(l.x * sx, -l.y * sy, -l.z * sz);
+
+function track(ts) {
+  const T = S.tasks, v = S.video; const W = proc.c.width, H = proc.c.height;
+  proc.x.drawImage(v, 0, 0, W, H);
+  const out = { pose: null };
+  const t = ts / 1000, mc = THREE.MathUtils.lerp(3.0, 0.25, P.smooth), beta = THREE.MathUtils.lerp(1.2, 0.15, P.smooth);
+  if (T.pose) T.pose.detectForVideo(proc.c, ts, res => {
+    if (!res.landmarks?.length) return;
+    const pi = smoothVecs('pi', res.landmarks[0], t, 2, mc * 2, beta * 20);
+    const pw = smoothVecs('pw', res.worldLandmarks[0], t, 3, mc, beta);
+    out.pose = { pi, pw: pw.map(l => toV(l)), vis: res.landmarks[0].map(l => l.visibility ?? 1), raw: res.landmarks[0] };
+    const m = res.segmentationMasks?.[0];
+    if (m) {
+      const arr = m.getAsFloat32Array(), mw = m.width, mh = m.height;
+      if (maskSmall.c.width !== mw || maskSmall.c.height !== mh) { maskSmall.c.width = mw; maskSmall.c.height = mh; maskImg = null; }
+      if (!maskImg) { maskImg = maskSmall.x.createImageData(mw, mh); maskImg.data.fill(255); }
+      // sanity: the torso centre should read as "person"
+      const cx = Math.floor((res.landmarks[0][11].x + res.landmarks[0][24].x) / 2 * mw), cy = Math.floor((res.landmarks[0][11].y + res.landmarks[0][24].y) / 2 * mh);
+      const sample = arr[clamp(cy, 0, mh - 1) * mw + clamp(cx, 0, mw - 1)];
+      S.maskInvert = sample < 0.25 ? true : sample > 0.75 ? false : S.maskInvert;
+      const d = maskImg.data, inv = S.maskInvert;
+      for (let i = 0; i < arr.length; i++) d[i * 4 + 3] = (inv ? 1 - arr[i] : arr[i]) * 255;
+      maskSmall.x.putImageData(maskImg, 0, 0); S.hasMask = true;
+    }
+  });
+  if (!out.pose) { S.hasMask = false; return null; }
+  const F = { pw: out.pose.pw, pi: out.pose.pi, vis: out.pose.vis, raw: out.pose.raw, hands: {}, face: null, shapes: null };
+  if ($('#tHands').checked && T.hands) {
+    const hr = T.hands.detectForVideo(proc.c, ts);
+    const pr = F.raw; const wr = { left: pr[15], right: pr[16] };
+    const cands = (hr.landmarks || []).map((lm, i) => ({ lm, w: hr.worldLandmarks[i] }));
+    const used = new Set();
+    for (const s of SIDES) {
+      let best = -1, bd = 0.15;
+      cands.forEach((c, i) => { if (used.has(i)) return; const d = Math.hypot(c.lm[0].x - wr[s].x, c.lm[0].y - wr[s].y); if (d < bd) { bd = d; best = i; } });
+      if (best >= 0) { used.add(best); F.hands[s] = smoothVecs('h' + s, cands[best].w, t, 3, mc * 1.5, beta).map(l => toV(l)); F.handsImg = F.handsImg || {}; F.handsImg[s] = cands[best].lm; }
+    }
+  }
+  if ($('#tFace').checked && T.face) {
+    const fr = T.face.detectForVideo(proc.c, ts);
+    if (fr.faceLandmarks?.length) {
+      const lm = smoothVecs('face', [234, 454, 10, 152].map(i => fr.faceLandmarks[0][i]), t, 3, mc, beta);
+      const f = []; [234, 454, 10, 152].forEach((idx, k) => f[idx] = toV(lm[k], W, H, W));
+      F.face = f; F.faceImg = fr.faceLandmarks[0];
+      if (fr.faceBlendshapes?.[0]) F.shapes = new Map(fr.faceBlendshapes[0].categories.map(c => [c.categoryName, c.score]));
+    }
+  }
+  return F;
+}
+
+/* ================= capture: compositing ================= */
+function sizeCanvases(vw, vh) {
+  const sc = Math.min(1, 1280 / vw), W = Math.round(vw * sc), H = Math.round(vh * sc);
+  if (W === S.W && H === S.H && view.width === W && renderer.domElement.width === W) return;
+  S.W = W; S.H = H; view.width = W; view.height = H;
+  const ps = Math.min(1, 640 / W); proc.c.width = Math.round(W * ps); proc.c.height = Math.round(H * ps);
+  for (const c of [hole, fnp, holeLayer]) { c.c.width = W; c.c.height = H; }
+  plate.c.width = W; plate.c.height = H;
+  pyr.forEach((p, i) => { const f = 4 * 2 ** i; p.c.width = Math.max(2, Math.round(W / f)); p.c.height = Math.max(2, Math.round(H / f)); });
+  renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+  capCam.aspect = W / H; capCam.updateProjectionMatrix();
+}
+function resetPlate() { plate.x.clearRect(0, 0, plate.c.width, plate.c.height); }
+$('#plateReset').onclick = resetPlate;
+$('#plateShot').onclick = () => { if (!S.video) return toast('Start the camera or load a video first.'); S.countdownEnd = performance.now() + 3000; toast('Step out of the frame…'); };
+$('#plateScan').onclick = scanPlate;
+$('#pad').oninput = e => { P.pad = +e.target.value; $('#padO').textContent = P.pad; };
+
+function updateRemoval(newFrame) {
+  const W = S.W, H = S.H, v = S.video;
+  // dilated person mask
+  hole.x.clearRect(0, 0, W, H); hole.x.filter = `blur(${P.pad * W / 1280}px)`; hole.x.drawImage(maskSmall.c, 0, 0, W, H); hole.x.filter = 'none';
+  hole.x.drawImage(hole.c, 0, 0); hole.x.drawImage(hole.c, 0, 0);
+  // frame with person cut out
+  fnp.x.globalCompositeOperation = 'source-over'; fnp.x.clearRect(0, 0, W, H); fnp.x.drawImage(v, 0, 0, W, H);
+  fnp.x.globalCompositeOperation = 'destination-out'; fnp.x.drawImage(hole.c, 0, 0); fnp.x.globalCompositeOperation = 'source-over';
+  if (newFrame) { plate.x.globalAlpha = 0.22; plate.x.drawImage(fnp.c, 0, 0); plate.x.globalAlpha = 1; }
+  // pull-push inpaint of the hole
+  pyr.forEach((p, i) => { p.x.globalCompositeOperation = 'source-over'; p.x.clearRect(0, 0, p.c.width, p.c.height); p.x.drawImage(i ? pyr[i - 1].c : fnp.c, 0, 0, p.c.width, p.c.height); });
+  const last = pyr[pyr.length - 1]; for (let k = 0; k < 6; k++) last.x.drawImage(last.c, 0, 0);
+  for (let i = pyr.length - 2; i >= 0; i--) { const p = pyr[i]; p.x.globalCompositeOperation = 'destination-over'; p.x.drawImage(pyr[i + 1].c, 0, 0, p.c.width, p.c.height); p.x.globalCompositeOperation = 'source-over'; }
+  holeLayer.x.globalCompositeOperation = 'source-over'; holeLayer.x.clearRect(0, 0, W, H);
+  holeLayer.x.drawImage(pyr[0].c, 0, 0, W, H); holeLayer.x.drawImage(plate.c, 0, 0);
+  holeLayer.x.globalCompositeOperation = 'destination-in'; holeLayer.x.drawImage(hole.c, 0, 0); holeLayer.x.globalCompositeOperation = 'source-over';
+}
+const POSE_LINKS = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28], [27, 31], [28, 32], [15, 19], [16, 20]];
+const HAND_LINKS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
+function drawSkeleton(c, F) {
+  if (!F) return; const W = S.W, H = S.H; c.lineWidth = Math.max(2, W / 400); c.lineCap = 'round';
+  const line = (lm, links, col) => { c.strokeStyle = col; c.beginPath(); for (const [a, b] of links) { c.moveTo(lm[a].x * W, lm[a].y * H); c.lineTo(lm[b].x * W, lm[b].y * H); } c.stroke(); c.fillStyle = col; for (const l of lm) { c.beginPath(); c.arc(l.x * W, l.y * H, c.lineWidth * 1.3, 0, 7); c.fill(); } };
+  line(F.pi, POSE_LINKS, '#00c853');
+  if (F.handsImg) for (const s of SIDES) if (F.handsImg[s]) line(F.handsImg[s], HAND_LINKS, s === 'left' ? '#2fd66b' : '#ff8a5c');
+  if (F.faceImg) { c.fillStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i < F.faceImg.length; i += 3) { const l = F.faceImg[i]; c.fillRect(l.x * W, l.y * H, 1.5, 1.5); } }
+}
+function compose(F) {
+  const W = S.W, H = S.H, v = S.video, mode = S.view;
+  vctx.save(); vctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (S.mirror) { vctx.translate(W, 0); vctx.scale(-1, 1); }
+  if (mode === 'green') { vctx.fillStyle = '#00b140'; vctx.fillRect(0, 0, W, H); }
+  else vctx.drawImage(v, 0, 0, W, H);
+  if (mode === 'replace' && S.hasMask && avatar.visible) vctx.drawImage(holeLayer.c, 0, 0);
+  if (avatar.visible) { vctx.globalAlpha = mode === 'skeleton' ? 0.55 : 1; vctx.drawImage(renderer.domElement, 0, 0, W, H); vctx.globalAlpha = 1; }
+  if (mode === 'skeleton') drawSkeleton(vctx, F);
+  vctx.restore();
+}
+$('#viewSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.view = b.dataset.v; $$('#viewSeg button').forEach(x => x.classList.toggle('on', x === b)); $('#plateGroup').style.opacity = S.view === 'replace' ? 1 : 0.5; };
+
+/* ================= capture: lifecycle ================= */
+function enterCapture() {
+  if (!S.ready) { toast('Finish the rig first.'); return; }
+  setWeights(false); $('#showWeights').checked = false;
+  prepareRest(); S.fit = null; filt.clear(); S.W = 0; OUT.crop = null; mouthChips();
+  ensureTasks();
+  if (S.src === 'cam' && !S.camStream) startCam();
+  if (S.src === 'file' && S.fileVideo) S.fileVideo.play().catch(() => { });
+}
+function leaveCapture() { if (S.recording) stopRec(); if (LIVE.pc) stopLive(); S.fileVideo?.pause(); stopCam(); $('#vidbar').style.display = 'none'; status(''); }
+
+/* ================= recording ================= */
+async function startRec() {
+  if (!S.video || S.video.readyState < 2) return toast('Start the camera or load a video first.');
+  const stream = programStream();
+  const mime = ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4;codecs=avc1,opus', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m)) || '';
+  if (!mime.startsWith('video/mp4')) toast('This browser can only record WebM. Update Chrome/Edge to get MP4.', false, 6000);
+  const chunks = []; const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 10e6 } : undefined);
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = () => {
+    const type = rec.mimeType || 'video/webm'; const blob = new Blob(chunks, { type });
+    stream.getTracks().forEach(t => t.stop());
+    addTake(blob, type, (performance.now() - S.recStart) / 1000, S.motion);
+  };
+  S.motion = $('#recMotion').checked ? { t: [], q: new Map(), root: [], scale: [] } : null;
+  rec.start(250); S.recorder = rec; S.recording = true; S.recStart = performance.now();
+  $$('.recbtn').forEach(b => { b.textContent = '■ Stop recording'; b.classList.add('stop'); }); $('#recDot').style.display = 'flex';
+}
+function stopRec() {
+  if (!S.recording) return; S.recording = false; S.renderingFull = false;
+  try { S.recorder.stop(); } catch { }
+  $$('.recbtn').forEach(b => { b.textContent = '● Record'; b.classList.remove('stop'); }); $('#recDot').style.display = 'none';
+  if (S.fileVideo) S.fileVideo.loop = true;
+}
+$$('.recbtn').forEach(b => b.onclick = () => { mixer().ctx.resume(); S.recording ? stopRec() : startRec(); });
+document.addEventListener('keydown', e => { if (S.step >= 3 && (e.key === 'r' || e.key === 'R') && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); S.recording ? stopRec() : startRec(); } });
+$('#renderFull').onclick = async () => {
+  const v = S.fileVideo; if (!v) return toast('Load a video first.');
+  if (S.recording) stopRec();
+  v.pause(); v.loop = false; v.currentTime = 0;
+  await new Promise(r => v.addEventListener('seeked', r, { once: true }));
+  S.fit = null; filt.clear();
+  await startRec(); S.renderingFull = true; v.play();
+  v.addEventListener('ended', () => { if (S.renderingFull) stopRec(); }, { once: true });
+};
+async function scanPlate() {
+  const v = S.fileVideo; if (!v || !S.tasks) return toast('Load a video and wait for tracking to be ready.');
+  if (S.recording) stopRec();
+  resetPlate(); S.scanning = true; v.pause(); v.loop = false; v.currentTime = 0; v.muted = true;
+  await new Promise(r => v.addEventListener('seeked', r, { once: true }));
+  v.playbackRate = 2; v.play(); status('Scanning the background…');
+  v.addEventListener('ended', async () => { S.scanning = false; v.playbackRate = 1; v.muted = false; v.loop = true; v.currentTime = 0; status(''); toast('Clean background built.'); v.play().catch(() => { }); }, { once: true });
+}
+function recordMotionFrame() {
+  const M = S.motion; if (!M) return; const t = (performance.now() - S.recStart) / 1000;
+  if (M.t.length && t - M.t[M.t.length - 1] < 1 / 31) return;
+  M.t.push(t);
+  for (const r of Object.values(S.R.b)) { if (!M.q.has(r.bone)) M.q.set(r.bone, []); const q = r.bone.quaternion; M.q.get(r.bone).push(q.x, q.y, q.z, q.w); }
+  M.root.push(avatar.position.clone()); M.scale.push(avatar.scale.x);
+}
+function addTake(blob, type, dur, motion) {
+  const url = URL.createObjectURL(blob), n = S.takes.length + 1, ext = type.includes('mp4') ? 'mp4' : 'webm';
+  const take = { url, ext, n, motion }; S.takes.push(take);
+  const el = document.createElement('div'); el.className = 'take';
+  el.innerHTML = `<video src="${url}" controls playsinline></video><div class="meta">Take ${n} · ${fmt(dur)} · ${ext.toUpperCase()}${motion && motion.t.length ? ' · ' + motion.t.length + ' motion frames' : ''}</div><div class="btns"><button class="btn primary" data-a="vid">Download video</button>${motion && motion.t.length > 1 ? '<button class="btn" data-a="glb">Download motion .glb</button>' : ''}</div>`;
+  el.querySelector('[data-a="vid"]').onclick = () => download(url, `stand-in-take${n}.${ext}`);
+  const g = el.querySelector('[data-a="glb"]'); if (g) g.onclick = () => exportMotion(take);
+  $('#takes').prepend(el);
+}
+const blobB64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = rej; r.readAsDataURL(b); });
+async function download(url, name) {
+  if (window.StandIn) { // inside the Android app: save straight to the gallery / Downloads
+    try {
+      status('Saving…'); const blob = await (await fetch(url)).blob();
+      const mime = (blob.type || '').split(';')[0] || (name.endsWith('.glb') ? 'model/gltf-binary' : 'video/mp4');
+      const id = StandIn.beginFile(name, mime); if (!id) throw new Error('could not create the file');
+      for (let o = 0; o < blob.size; o += 786432) { if (!StandIn.appendFile(id, await blobB64(blob.slice(o, o + 786432)))) throw new Error('write failed'); }
+      const uri = StandIn.endFile(id); status('');
+      toast(mime.startsWith('video') ? 'Saved to Movies/Stand-In' : 'Saved to Downloads/Stand-In');
+      if (uri) StandIn.shareFile(uri, mime);
+    } catch (e) { status(''); toast('Save failed: ' + e.message, true); }
+    return;
+  }
+  webDownload(url, name);
+}
+function webDownload(url, name) { const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+function exportMotion(take) {
+  const M = take.motion; status('Building animation file…');
+  const savedPos = avatar.position.clone(), savedScale = avatar.scale.x, savedVis = avatar.visible;
+  try {
+    const times = new Float32Array(M.t.map(t => t - M.t[0])), tracks = [];
+    for (const [bone, vals] of M.q) tracks.push(new THREE.QuaternionKeyframeTrack(bone.uuid + '.quaternion', times, new Float32Array(vals)));
+    const r0 = M.root[0], rp = [];
+    M.root.forEach((p, i) => { const d = sub(p, r0).divideScalar(M.scale[i]); rp.push(d.x, d.y, d.z); });
+    tracks.push(new THREE.VectorKeyframeTrack(avatar.uuid + '.position', times, new Float32Array(rp)));
+    const clip = new THREE.AnimationClip('StandInMocap', -1, tracks);
+    avatar.position.set(0, 0, 0); avatar.scale.setScalar(1); avatar.visible = true;
+    new GLTFExporter().parse(avatar, glb => {
+      avatar.position.copy(savedPos); avatar.scale.setScalar(savedScale); avatar.visible = savedVis; status('');
+      download(URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' })), `stand-in-take${take.n}-motion.glb`);
+    }, err => { avatar.position.copy(savedPos); avatar.scale.setScalar(savedScale); status(''); toast('Export failed: ' + err.message, true); }, { binary: true, animations: [clip], onlyVisible: true });
+  } catch (e) { avatar.position.copy(savedPos); avatar.scale.setScalar(savedScale); avatar.visible = savedVis; status(''); toast('Export failed: ' + e.message, true); }
+}
+
+/* ================= mouth ================= */
+const MO = { open: 0, smile: 0, round: 0, stk: null, tex: null, cv: null, key: '', base: null };
+const MOUTH_ALIASES = ['jawopen', 'mouthopen', 'mthopen', 'aa', 'a', 'vrcvaa', 'mtha', 'fclmtha', 'vaa', 'visemeaa', 'mouthaa', 'mouthopenclosed'];
+function hasMouthShapes() { return !!S.vrm?.expressionManager || MOUTH_ALIASES.some(n => S.morphs.has(n)); }
+function mouthMode() { const m = $('#mouthMode').value; if (m !== 'auto') return m; if (hasMouthShapes()) return 'shapes'; if (S.R?.b.jaw) return 'jaw'; return 'sticker'; }
+function mouthChips() {
+  const sh = hasMouthShapes(), jw = !!S.map.jaw;
+  $('#mouthChips').innerHTML = `<span class="chip ${sh ? 'ok' : ''}">Face shapes ${sh ? '✓' : '—'}</span><span class="chip ${jw ? 'ok' : ''}">Jaw bone ${jw ? '✓' : '—'}</span><span class="chip ok">Drawn mouth ✓</span><span class="chip">Using: ${({ shapes: 'face shapes', jaw: 'jaw bone', sticker: 'drawn mouth', off: 'off' })[mouthMode()]}</span>`;
+  $('#stickerBox').style.display = mouthMode() === 'sticker' ? 'block' : 'none';
+}
+$('#mouthMode').onchange = () => { mouthChips(); if (MO.stk) MO.stk.visible = mouthMode() === 'sticker'; };
+function applyJaw(open) {
+  const R = S.R, r = R?.b.jaw, h = R?.b.head; if (!r || !h) return;
+  const dHead = h.bone.getWorldQuaternion(new THREE.Quaternion()).multiply(h.wq.clone().invert());
+  const axis = V(1, 0, 0).applyQuaternion(R.chestFrame).applyQuaternion(dHead).normalize();
+  applyWorld('jaw', axisQ(axis, open * 0.42).multiply(dHead), 1);
+}
+function updateMouth(F, dt) {
+  let open = 0, smile = 0, round = 0; const sh = F?.shapes;
+  if (sh) {
+    open = clamp(((sh.get('jawOpen') || 0) - 0.04) * 1.3, 0, 1);
+    smile = ((sh.get('mouthSmileLeft') || 0) + (sh.get('mouthSmileRight') || 0)) / 2;
+    round = Math.max(sh.get('mouthFunnel') || 0, sh.get('mouthPucker') || 0);
+  }
+  if ($('#voiceSync').checked) open = Math.max(open, clamp((micRMS() - 0.008) * P.voiceGain, 0, 1));
+  open = clamp(open * P.jawAmt, 0, 1);
+  MO.open += (open - MO.open) * (open > MO.open ? 0.6 : 0.3); MO.smile += (smile - MO.smile) * 0.3; MO.round += (round - MO.round) * 0.3;
+  if (sh) applyShapes(sh);
+  const mode = mouthMode();
+  if (mode === 'shapes') {
+    for (const n of MOUTH_ALIASES) { const list = S.morphs.get(n); if (list) for (const [m, i] of list) m.morphTargetInfluences[i] = MO.open; }
+    const em = S.vrm?.expressionManager; if (em) { try { em.setValue('aa', MO.open); } catch { } }
+  }
+  if (mode === 'jaw') applyJaw(MO.open); else relax('jaw', 0.3);
+  if (mode === 'sticker') { const st = ensureSticker(); if (st) { st.visible = true; drawSticker(); } }
+  else if (MO.stk) MO.stk.visible = false;
+  $('#mouthMeter').style.width = (MO.open * 100).toFixed(0) + '%';
+}
+function ensureSticker() {
+  if (MO.stk && MO.stk.parent) return MO.stk;
+  const R = S.R, hb = R?.b.head; if (!hb) return null;
+  // measure the face at rest, then put the pose back
+  const saved = [...S.restLocal.keys()].map(b => [b, b.quaternion.clone()]);
+  const sp = avatar.position.clone(), ss = avatar.scale.x, sv = avatar.visible;
+  restoreRest(); avatar.position.set(0, 0, 0); avatar.scale.setScalar(1); avatar.updateMatrixWorld(true);
+  try {
+    const headM = hb.bone.matrixWorld.clone(), hp = hb.wp, fwd = R.fwd.clone().normalize(), up = R.up.clone();
+    const top = new THREE.Box3().setFromObject(avatar).max.y;
+    let mouthY = hp.y + 0.24 * (top - hp.y);
+    const jaw = R.b.jaw, chin = jaw && jaw.bone.children.find(o => o.isBone);
+    if (chin) { const c = chin.getWorldPosition(V()); mouthY = c.y + 0.6 * (jaw.wp.y - c.y); }
+    const meshes = []; avatar.traverse(o => o.isMesh && o !== MO.stk && meshes.push(o));
+    const rc = new THREE.Raycaster(V(hp.x, mouthY, hp.z).addScaledVector(fwd, 3), fwd.clone().negate(), 0, 6);
+    const hit = rc.intersectObjects(meshes, false)[0];
+    const point = hit ? hit.point.clone().addScaledVector(fwd, 0.004) : V(hp.x, mouthY, hp.z).addScaledVector(fwd, 0.1);
+    if (!MO.cv) { MO.cv = document.createElement('canvas'); MO.cv.width = 256; MO.cv.height = 160; MO.tex = new THREE.CanvasTexture(MO.cv); MO.tex.colorSpace = THREE.SRGBColorSpace; }
+    const mat = new THREE.MeshBasicMaterial({ map: MO.tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, toneMapped: false });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 160 / 256), mat); mesh.name = 'DrawnMouth'; mesh.renderOrder = 5; mesh.frustumCulled = false;
+    MO.base = { point, up, fwd, w: clamp((top - hp.y) * 0.3, 0.03, 0.3), headInv: headM.invert() };
+    hb.bone.add(mesh); MO.stk = mesh; MO.key = ''; placeSticker();
+  } finally {
+    for (const [b, q] of saved) b.quaternion.copy(q);
+    avatar.position.copy(sp); avatar.scale.setScalar(ss); avatar.visible = sv; avatar.updateMatrixWorld(true);
+  }
+  return MO.stk;
+}
+function placeSticker() {
+  const m = MO.stk, B = MO.base; if (!m || !B) return;
+  const p = B.point.clone().addScaledVector(B.up, P.stkY), q = new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), B.fwd);
+  const local = B.headInv.clone().multiply(new THREE.Matrix4().compose(p, q, V(1, 1, 1).multiplyScalar(B.w * P.stkS)));
+  local.decompose(m.position, m.quaternion, m.scale);
+}
+function drawSticker() {
+  const key = [MO.open, MO.smile, MO.round].map(v => Math.round(v * 20)).join(',') + P.stkC; if (key === MO.key) return; MO.key = key;
+  const c = MO.cv.getContext('2d'), cx = 128, cy = 80; c.clearRect(0, 0, 256, 160);
+  const w = 150 * (1 + MO.smile * 0.25 - MO.round * 0.45), h = 10 + MO.open * 110 * (1 + MO.round * 0.3);
+  if (MO.open < 0.08) {
+    const lift = MO.smile * 22; c.strokeStyle = P.stkC; c.lineWidth = 12; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(cx - w / 2, cy - lift); c.quadraticCurveTo(cx, cy + 10 + lift * 1.4, cx + w / 2, cy - lift); c.stroke();
+  } else {
+    c.save(); c.beginPath(); c.ellipse(cx, cy, w / 2, h / 2, 0, 0, Math.PI * 2); c.fillStyle = P.stkC; c.fill(); c.clip();
+    c.fillStyle = '#f4f1ea'; c.fillRect(cx - w * 0.34, cy - h / 2, w * 0.68, Math.min(18, h * 0.2));
+    c.fillStyle = '#d4616d'; c.beginPath(); c.ellipse(cx, cy + h * 0.36, w * 0.32, h * 0.28, 0, 0, Math.PI * 2); c.fill(); c.restore();
+  }
+  MO.tex.needsUpdate = true;
+}
+
+/* ================= audio mixer ================= */
+const MX = { ctx: null };
+function mixer() {
+  if (MX.ctx) return MX;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  Object.assign(MX, { ctx, dest: ctx.createMediaStreamDestination(), mic: ctx.createGain(), game: ctx.createGain(), file: ctx.createGain(), an: ctx.createAnalyser(), buf: new Float32Array(1024) });
+  MX.an.fftSize = 1024; MX.mic.gain.value = 0;
+  [MX.mic, MX.game, MX.file].forEach(g => g.connect(MX.dest));
+  return MX;
+}
+async function ensureMic() {
+  const m = mixer(); m.ctx.resume(); if (m.micStream) return true;
+  try {
+    m.micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const src = m.ctx.createMediaStreamSource(m.micStream); src.connect(m.an); src.connect(m.mic); return true;
+  } catch (e) { toast('Microphone unavailable: ' + e.message, true); return false; }
+}
+function micRMS() { if (!MX.micStream) return 0; MX.an.getFloatTimeDomainData(MX.buf); let s = 0; for (let i = 0; i < MX.buf.length; i++) s += MX.buf[i] * MX.buf[i]; return Math.sqrt(s / MX.buf.length); }
+function setMicOut(on) { $$('.micOut').forEach(c => c.checked = on); S.micOut = on; if (on) ensureMic(); }
+$$('.micOut').forEach(c => c.onchange = () => setMicOut(c.checked));
+$('#voiceSync').onchange = e => { if (e.target.checked) ensureMic(); };
+let fileHooked = null;
+function hookFileAudio() {
+  const v = S.fileVideo; if (!v || fileHooked === v) return;
+  try { const m = mixer(); m.ctx.resume(); const src = m.ctx.createMediaElementSource(v); src.connect(m.file); src.connect(m.ctx.destination); fileHooked = v; } catch (e) { console.warn(e); }
+}
+function meters() {
+  if (!MX.ctx) return;
+  $('#micMeter').style.width = clamp(micRMS() * 500, 0, 100).toFixed(0) + '%';
+  MX.mic.gain.value = S.micOut ? P.micVol : 0; MX.game.gain.value = P.gameVol; MX.file.gain.value = S.src === 'file' ? P.fileVol : 0;
+}
+function programStream() {
+  const m = mixer(); m.ctx.resume(); if (S.src === 'file') hookFileAudio();
+  const st = prog.captureStream(OUT.fps); st.addTrack(m.dest.stream.getAudioTracks()[0].clone()); return st;
+}
+
+/* ================= scenes: game capture + character box ================= */
+const OUT = { w: 1280, h: 720, fps: 30, layout: 'camera', layer: 'avatar', corner: 'br', bx: 0.8, by: 0.7, auto: true, card: false, crop: null, box: null };
+const gameVideo = document.createElement('video'); gameVideo.muted = true; gameVideo.playsInline = true;
+async function startGame() {
+  if (!navigator.mediaDevices?.getDisplayMedia) return toast('Screen capture needs Chrome or Edge on a computer.', true);
+  try {
+    const st = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: OUT.fps } }, audio: true, selfBrowserSurface: 'exclude', surfaceSwitching: 'include', systemAudio: 'include' });
+    stopGame(); S.gameStream = st; gameVideo.srcObject = st; await gameVideo.play();
+    st.getVideoTracks()[0].addEventListener('ended', stopGame);
+    const at = st.getAudioTracks()[0];
+    if (at) { const m = mixer(); m.ctx.resume(); S.gameSrc = m.ctx.createMediaStreamSource(new MediaStream([at])); S.gameSrc.connect(m.game); }
+    setLayout('game');
+    toast(at ? 'Game captured with sound.' : 'Game captured without sound — tick “Share audio” next time to include it.');
+  } catch (e) { if (e.name !== 'NotAllowedError') toast('Screen capture failed: ' + e.message, true); }
+}
+function stopGame() { if (S.gameStream) { S.gameStream.getTracks().forEach(t => t.stop()); S.gameStream = null; } try { S.gameSrc?.disconnect(); } catch { } S.gameSrc = null; gameVideo.srcObject = null; updateEmpty(); }
+$('#gameStart').onclick = startGame; $('#gameStop').onclick = stopGame;
+function setLayout(v) { OUT.layout = v; $$('#layoutSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); $('#gameBox').classList.toggle('hide', v !== 'game'); updateEmpty(); }
+$('#layoutSeg').onclick = e => { const b = e.target.closest('button'); if (b) setLayout(b.dataset.v); };
+$('#layerSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; OUT.layer = b.dataset.v; $$('#layerSeg button').forEach(x => x.classList.toggle('on', x === b)); };
+$('#cornerBtns').onclick = e => { const b = e.target.closest('button'); if (b) OUT.corner = b.dataset.c; };
+$('#autoFrame').onchange = e => OUT.auto = e.target.checked;
+$('#boxCard').onchange = e => OUT.card = e.target.checked;
+$('#outRes').onchange = e => {
+  if (LIVE.pc || S.recording) { toast('Stop recording and streaming before changing quality.'); e.target.value = `${OUT.w}x${OUT.h}x${OUT.fps}`; return; }
+  const [w, h, f] = e.target.value.split('x').map(Number); Object.assign(OUT, { w, h, fps: f }); prog.width = w; prog.height = h;
+};
+function updateCrop() {
+  if (!avatar.visible || !S.R) return;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; const v = V();
+  for (const r of Object.values(S.R.b)) { r.bone.getWorldPosition(v).project(capCam); const x = (v.x + 1) / 2 * S.W, y = (1 - v.y) / 2 * S.H; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const bh = y1 - y0, bw = x1 - x0; y0 -= bh * 0.15 + S.H * 0.02; y1 += bh * 0.05 + S.H * 0.02;
+  let h = y1 - y0, w = h * 0.75; if (bw * 1.25 > w) { w = bw * 1.25; h = w / 0.75; }
+  const t = { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h };
+  if (!OUT.crop) OUT.crop = t; else for (const k of ['x', 'y', 'w', 'h']) OUT.crop[k] += (t[k] - OUT.crop[k]) * 0.12;
+}
+function drawFit(c, src, sw, sh, X, Y, W, H) { const s = Math.min(W / sw, H / sh), w = sw * s, h = sh * s; c.drawImage(src, X + (W - w) / 2, Y + (H - h) / 2, w, h); }
+function composeProgram(noCam = false) {
+  const W = prog.width, H = prog.height, c = pctx;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1;
+  if (OUT.gamer) { // floating character over a game: transparent, auto-framed, feet on the bottom edge
+    c.clearRect(0, 0, W, H); if (!avatar.visible || !S.W) return;
+    const cr = OUT.crop || { x: 0, y: 0, w: S.W, h: S.H }, s = Math.min(W / cr.w, H / cr.h), w = cr.w * s, h = cr.h * s, x = (W - w) / 2, y = H - h;
+    if (S.mirror) { c.save(); c.translate(x + w, y); c.scale(-1, 1); c.drawImage(renderer.domElement, cr.x, cr.y, cr.w, cr.h, 0, 0, w, h); c.restore(); }
+    else c.drawImage(renderer.domElement, cr.x, cr.y, cr.w, cr.h, x, y, w, h);
+    return;
+  }
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  const game = OUT.layout === 'game' && S.gameStream && gameVideo.readyState >= 2 && gameVideo.videoWidth;
+  if (!game) {
+    OUT.box = null;
+    if (OUT.layout === 'game') { c.fillStyle = '#9aa39d'; c.font = `600 ${Math.round(H / 26)}px "Space Grotesk", sans-serif`; c.textAlign = 'center'; c.fillText('Click “Capture game screen” to start this scene', W / 2, H / 2); return; }
+    if (!noCam && view.width > 2) drawFit(c, view, view.width, view.height, 0, 0, W, H);
+    return;
+  }
+  drawFit(c, gameVideo, gameVideo.videoWidth, gameVideo.videoHeight, 0, 0, W, H);
+  if (noCam || !S.W) { OUT.box = null; return; }
+  const cr = OUT.auto && OUT.crop ? { ...OUT.crop } : { x: 0, y: 0, w: S.W, h: S.H };
+  const bw = W * P.boxSize, bh = bw * cr.h / cr.w, m = 0.025 * W;
+  let cx, cy;
+  if (OUT.corner) { cx = OUT.corner[1] === 'l' ? m + bw / 2 : W - m - bw / 2; cy = OUT.corner[0] === 't' ? m + bh / 2 : H - bh / 2; OUT.bx = cx / W; OUT.by = cy / H; }
+  else { cx = OUT.bx * W; cy = OUT.by * H; }
+  const bx = cx - bw / 2, by = cy - bh / 2; OUT.box = { x: bx, y: by, w: bw, h: bh };
+  const rr = Math.min(bw, bh) * 0.06;
+  if (OUT.card) { c.fillStyle = 'rgba(12,14,15,.6)'; c.strokeStyle = '#00c853'; c.lineWidth = Math.max(2, W / 640); c.beginPath(); c.roundRect(bx, by, bw, bh, rr); c.fill(); c.stroke(); }
+  if (OUT.layer === 'avatar' && !avatar.visible) return;
+  c.save();
+  if (OUT.card || OUT.layer === 'view') { c.beginPath(); c.roundRect(bx, by, bw, bh, rr); c.clip(); }
+  if (OUT.layer === 'avatar') {
+    const src = renderer.domElement;
+    if (S.mirror) { c.translate(bx + bw, by); c.scale(-1, 1); c.drawImage(src, cr.x, cr.y, cr.w, cr.h, 0, 0, bw, bh); }
+    else c.drawImage(src, cr.x, cr.y, cr.w, cr.h, bx, by, bw, bh);
+  } else c.drawImage(view, S.mirror ? S.W - cr.x - cr.w : cr.x, cr.y, cr.w, cr.h, bx, by, bw, bh);
+  c.restore();
+}
+let boxDrag = null;
+function progXY(e) { const r = prog.getBoundingClientRect(), s = Math.min(r.width / prog.width, r.height / prog.height); return { x: (e.clientX - r.left - (r.width - prog.width * s) / 2) / s, y: (e.clientY - r.top - (r.height - prog.height * s) / 2) / s }; }
+const inBox = p => { const b = OUT.box; return b && OUT.layout === 'game' && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h; };
+prog.addEventListener('pointerdown', e => { const p = progXY(e); if (!inBox(p)) return; const b = OUT.box; boxDrag = { dx: p.x - (b.x + b.w / 2), dy: p.y - (b.y + b.h / 2) }; OUT.corner = null; prog.setPointerCapture(e.pointerId); });
+prog.addEventListener('pointermove', e => { const p = progXY(e); prog.style.cursor = boxDrag ? 'grabbing' : inBox(p) ? 'grab' : ''; if (!boxDrag) return; OUT.bx = clamp((p.x - boxDrag.dx) / prog.width, 0, 1); OUT.by = clamp((p.y - boxDrag.dy) / prog.height, 0, 1); });
+prog.addEventListener('pointerup', () => boxDrag = null);
+
+/* ================= output window + live streaming ================= */
+let popWin = null;
+$('#popOut').onclick = () => {
+  if (popWin && !popWin.closed) { popWin.focus(); return; }
+  popWin = window.open('', 'StandInOutput', `width=${Math.round(prog.width / 1.5)},height=${Math.round(prog.height / 1.5)}`);
+  if (!popWin) return toast('The browser blocked the window — allow pop-ups for this page and try again.', true);
+  try {
+  const d = popWin.document; d.title = 'Stand-In Output';
+  d.body.style.cssText = 'margin:0;background:#000;overflow:hidden;height:100vh'; d.body.innerHTML = '';
+  const v = d.createElement('video'); v.autoplay = true; v.muted = true; v.playsInline = true;
+  v.style.cssText = 'width:100vw;height:100vh;object-fit:contain;display:block;background:#000';
+  d.body.appendChild(v); v.srcObject = prog.captureStream(OUT.fps); v.play().catch(() => { });
+  popWin.addEventListener('beforeunload', () => v.srcObject?.getTracks().forEach(t => t.stop()));
+  } catch (e) { popWin.close(); popWin = null; toast('Could not open the output window here. Serve this page from http://localhost (see the note on the Capture tab) and try again.', true, 9000); }
+};
+const LIVE = { pc: null, res: null, token: null, start: 0, stream: null };
+async function whipPublish(url, token, stream) {
+  const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }], bundlePolicy: 'max-bundle' });
+  const vt = pc.addTransceiver(stream.getVideoTracks()[0], { direction: 'sendonly', streams: [stream], sendEncodings: [{ maxBitrate: P.kbps * 1000, maxFramerate: OUT.fps }] });
+  pc.addTransceiver(stream.getAudioTracks()[0], { direction: 'sendonly', streams: [stream] });
+  try { // Twitch only takes H.264 + Opus
+    const caps = RTCRtpSender.getCapabilities('video').codecs;
+    const h264 = caps.filter(c => /h264/i.test(c.mimeType)), extra = caps.filter(c => /rtx|red|ulpfec/i.test(c.mimeType));
+    if (h264.length && vt.setCodecPreferences) vt.setCodecPreferences([...h264, ...extra]);
+  } catch (e) { console.warn(e); }
+  await pc.setLocalDescription(await pc.createOffer());
+  await new Promise(r => { if (pc.iceGatheringState === 'complete') return r(); const t = setTimeout(r, 2500); pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); r(); } }); });
+  const headers = { 'Content-Type': 'application/sdp' }; if (token) headers.Authorization = 'Bearer ' + token;
+  let res;
+  try { res = await fetch(url, { method: 'POST', headers, body: pc.localDescription.sdp }); }
+  catch (e) { pc.close(); throw new Error('the server would not accept a connection from this page'); }
+  if (!res.ok) { pc.close(); throw new Error(res.status === 401 || res.status === 403 ? 'the stream key was rejected' : 'the server answered ' + res.status); }
+  const answer = await res.text(), loc = res.headers.get('Location');
+  await pc.setRemoteDescription({ type: 'answer', sdp: answer });
+  return { pc, res: loc ? new URL(loc, url).href : null, token };
+}
+async function goLive(kind) {
+  if (LIVE.pc) return stopLive();
+  let url, token;
+  if (kind === 'twitch') { url = 'https://g.webrtc.live-video.net:4443/v2/offer'; token = $('#twKey').value.trim(); if (!token) return toast('Paste your Twitch stream key first.', true); }
+  else { url = $('#whipUrl').value.trim(); token = $('#whipTok').value.trim(); if (!/^https?:\/\//.test(url)) return toast('Enter the WHIP URL first.', true); }
+  if (!S.video) toast('Tip: start the camera or a video so your character shows up.');
+  const stream = programStream(); status('Connecting…');
+  try {
+    const r = await whipPublish(url, token, stream);
+    Object.assign(LIVE, r, { start: performance.now(), stream });
+    r.pc.addEventListener('connectionstatechange', () => { if (r.pc.connectionState === 'failed') { toast('The stream connection dropped.', true); stopLive(); } });
+    status(''); liveUI(true); toast('You are live!');
+  } catch (e) { stream.getTracks().forEach(t => t.stop()); status(''); toast(`Couldn't go live directly — ${e.message}. The OBS tab works with every platform.`, true, 10000); }
+}
+function stopLive() {
+  const { pc, res, token, stream } = LIVE; LIVE.pc = null;
+  if (res) fetch(res, { method: 'DELETE', headers: token ? { Authorization: 'Bearer ' + token } : {} }).catch(() => { });
+  try { pc?.close(); } catch { } stream?.getTracks().forEach(t => t.stop()); LIVE.stream = null; liveUI(false);
+}
+function liveUI(on) {
+  $$('.golive').forEach(b => { b.classList.toggle('on', on); b.textContent = on ? '■ End stream' : b.dataset.live === 'twitch' ? 'Go live on Twitch' : 'Go live'; });
+  $('#liveDot').style.display = on ? 'flex' : 'none';
+}
+$$('.golive').forEach(b => b.onclick = () => { mixer().ctx.resume(); goLive(b.dataset.live); });
+$('#destSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; $$('#destSeg button').forEach(x => x.classList.toggle('on', x === b)); $$('.dest').forEach(d => d.classList.toggle('on', d.dataset.d === b.dataset.v)); };
+window.addEventListener('beforeunload', () => { if (LIVE.pc) stopLive(); });
+
+/* new sliders */
+Object.assign(P, { voiceGain: 12, jawAmt: 1, stkY: 0, stkS: 1, stkC: '#3b1c1f', micVol: 1, gameVol: 1, fileVol: 1, kbps: 4500, boxSize: 0.3 });
+for (const id of ['voiceGain', 'jawAmt', 'stkY', 'stkS', 'micVol', 'gameVol', 'fileVol', 'kbps', 'boxSize']) {
+  const el = $('#' + id), o = $('#' + id + 'O');
+  el.oninput = () => { P[id] = +el.value; if (o) o.textContent = el.value; if (id === 'stkY' || id === 'stkS') placeSticker(); };
+}
+$('#stkC').oninput = e => { P.stkC = e.target.value; MO.key = ''; };
+
+/* ================= Android app (Stand-In Gamer) ================= */
+if (window.StandIn) { $('#gamerGroup').classList.remove('hide'); document.documentElement.classList.add('app'); }
+$('#gmStart').onclick = () => {
+  if (!window.StandIn) return;
+  if (!S.R) return toast('Finish the rig first.', true);
+  if (!S.video || S.video.readyState < 2) return toast('Start the camera first on the Capture step.', true);
+  StandIn.startGamer(JSON.stringify({ landscape: $('#gmOrient').value === 'landscape', bitrate: +$('#gmQuality').value, size: +$('#gmSize').value, mic: $('#gmMic').checked }));
+};
+$('#gmShare').onclick = () => window.StandIn && StandIn.shareLast();
+$('#gmOpen').onclick = () => window.StandIn && StandIn.openLast();
+window.standInGamer = on => {
+  OUT.gamer = !!on; document.documentElement.classList.toggle('gamer', OUT.gamer);
+  if (OUT.gamer) { OUT._size = [prog.width, prog.height]; prog.width = 600; prog.height = 800; OUT.crop = null; }
+  else if (OUT._size) { prog.width = OUT._size[0]; prog.height = OUT._size[1]; OUT._size = null; }
+};
+window.standInNative = (type, msg) => {
+  if (type === 'saved') { $('#gmLast').classList.remove('hide'); toast('Saved your MP4 to Movies/Stand-In', false, 7000); }
+  else if (type === 'needOverlay') toast('Allow “Display over other apps” for Stand-In Gamer, then press Start again.', false, 9000);
+  else if (type === 'error') toast(msg || 'Something went wrong.', true, 9000);
+};
+
+/* ================= sliders ================= */
+for (const id of ['size', 'offX', 'offY', 'smooth', 'pitch', 'light', 'fov']) {
+  const el = $('#' + id), o = $('#' + id + 'O');
+  el.oninput = () => { P[id] = +el.value; o.textContent = id === 'pitch' || id === 'fov' ? el.value + '°' : el.value; if (id === 'light') { hemi.intensity = P.light * 0.75; sun.intensity = P.light * 1.35; } if (id === 'fov') { capCam.fov = P.fov; capCam.updateProjectionMatrix(); } };
+}
+
+/* ================= main loop ================= */
+function resize() {
+  if (S.step === 3) return;
+  const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(w, h, false);
+  editCam.aspect = w / h; editCam.updateProjectionMatrix();
+}
+const ro = new ResizeObserver(resize); ro.observe(stage);
+let lastT = performance.now(), lastF = null;
+function loop(now) { requestAnimationFrame(loop); frame(now); }
+// keep running while the tab is hidden (behind a game / in OBS) — rAF stops there, a worker timer doesn't
+const ticker = new Worker(URL.createObjectURL(new Blob(['let t=null;onmessage=e=>{clearInterval(t);if(e.data>0)t=setInterval(()=>postMessage(0),e.data)}'], { type: 'text/javascript' })));
+ticker.onmessage = () => { if (document.hidden) frame(performance.now()); };
+document.addEventListener('visibilitychange', () => ticker.postMessage(document.hidden ? Math.round(1000 / OUT.fps) : 0));
+function frame(now) {
+  const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  if (S.step !== 3) {
+    controls.update();
+    const canPreview = S.ready && $('#preview').checked && S.step === 2;
+    if (canPreview) { if (!S.R) prepareRest(); previewPose(now / 1000); S.previewing = true; }
+    else if (S.previewing) { restoreRest(); S.previewing = false; }
+    S.vrm?.update(dt);
+    renderer.setClearColor(0x0c0e0f, 1);
+    renderer.render(scene, editCam);
+    return;
+  }
+  captureTick(now, dt);
+}
+function captureTick(now, dt) {
+  const v = S.video;
+  if (!v || v.readyState < 2 || !v.videoWidth) { updateVidbar(); meters(); if (OUT.layout === 'game') composeProgram(true); return; }
+  sizeCanvases(v.videoWidth, v.videoHeight);
+  const newFrame = v.currentTime !== S.lastVT; S.lastVT = v.currentTime;
+  let F = lastF;
+  if (newFrame && S.tasks) {
+    const ts = Math.max(S.lastTs + 1, Math.round(performance.now())); S.lastTs = ts;
+    if (S.scanning) { // fast pass: mask only
+      F = track(ts); if (F) updateRemoval(true); else { plate.x.globalAlpha = 0.25; plate.x.drawImage(v, 0, 0, S.W, S.H); plate.x.globalAlpha = 1; }
+      compose(null); composeProgram(); updateVidbar(); return;
+    }
+    F = track(ts); lastF = F;
+    if (F) { S.lastSeen = now; solve(F); fitRoot(F); avatar.visible = true; if (S.recording) recordMotionFrame(); }
+    else if (now - S.lastSeen > 400) avatar.visible = false;
+    if (S.view === 'replace' && !OUT.gamer) { if (F) updateRemoval(true); else if (!S.countdownEnd) { plate.x.globalAlpha = 0.22; plate.x.drawImage(v, 0, 0, S.W, S.H); plate.x.globalAlpha = 1; } }
+    // fps
+    S.fpsN++; if (now - S.fpsT > 1000) { S.fps = S.fpsN * 1000 / (now - S.fpsT); S.fpsN = 0; S.fpsT = now; $('#hFps').textContent = S.fps.toFixed(0) + ' fps'; }
+    $('#hBody').classList.toggle('on', !!F); $('#hHands').classList.toggle('on', !!(F && (F.hands.left || F.hands.right))); $('#hFace').classList.toggle('on', !!(F && F.face));
+  }
+  // clean-plate countdown
+  if (S.countdownEnd) {
+    const left = S.countdownEnd - now, cd = $('#countdown');
+    if (left > 0) { cd.style.display = 'grid'; cd.innerHTML = `<div>${Math.ceil(left / 1000)}<small>step out of the frame</small></div>`; }
+    else { cd.style.display = 'none'; S.countdownEnd = 0; plate.x.clearRect(0, 0, S.W, S.H); plate.x.drawImage(v, 0, 0, S.W, S.H); toast('Background captured — step back in.'); }
+  }
+  if (avatar.visible && S.R) updateMouth(F, dt);
+  S.vrm?.update(dt);
+  renderer.setClearColor(0x000000, 0);
+  renderer.render(scene, capCam);
+  if (!OUT.gamer) compose(F);
+  if (newFrame) updateCrop();
+  composeProgram();
+  meters();
+  if (S.recording) $('#recDot').textContent = 'REC ' + fmt((performance.now() - S.recStart) / 1000);
+  if (LIVE.pc) $('#liveDot').textContent = 'LIVE ' + fmt((performance.now() - LIVE.start) / 1000);
+  updateVidbar();
+}
+requestAnimationFrame(loop);
+setSource('cam');
+updateEmpty(); enableSteps();
+$('#plateGroup').style.opacity = 1;
+</script>
+</body>
+</html>
