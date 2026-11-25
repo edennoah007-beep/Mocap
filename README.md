@@ -3,7 +3,7 @@
 Upload a 3D model, it poses itself like a VTuber avatar and follows your face with the front camera.
 Pick the mouth shape, use a green screen, and record an **MP4** to your gallery.
 
-**Download the APK:** https://github.com/OWNER/REPO/releases/latest/download/VStage.apk
+**Download the APK:** open this repo's Releases page and grab the newest **VStage (build N)** → `VStage.apk`.
 
 ## Features
 - **Models:** `.vrm` (VRoid), `.glb`, `.gltf`, `.fbx` (Mixamo). Built-in demo avatar. Remembers your last model.
@@ -23,5 +23,5 @@ Pick the mouth shape, use a green screen, and record an **MP4** to your gallery.
 - Mouth shapes need a model with blendshapes / shape keys (all VRoid VRMs have them; ARKit "perfect sync" models are supported).
 
 ## Build
-GitHub Actions builds `VStage.apk` on every push to `main` and publishes it as a Release.
+GitHub Actions builds `VStage.apk` on every push to the `vstage` branch and publishes it as a Release.
 Locally: `./gradlew assembleDebug`.
