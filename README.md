@@ -13,6 +13,7 @@ Pick the mouth shape, use a green screen, and record an **MP4** to your gallery.
   - Arm poses: Relaxed, Wave, Cheer, Hands on hips, Think, or *Copy my arms* (camera).
   - Expressions: Neutral, Happy, Angry, Sad, Surprised, Relaxed.
 - **Mouth:** copy your mouth (camera), move when you talk (mic), or hold Closed / A / I / U / E / O / Smile.
+- **Voice changer:** 2011X-style demon (pitched down + octave-down monster layer, growl, grit, echo), Deep, Chipmunk, Robot, Ghost, Glitch, Radio. Baked into the MP4. "Test my voice" plays back 3 seconds.
 - **Background:** green screen (#00FF00), blue screen, black, white, custom color, your camera, or a picture.
 - **Recording:** MP4 (H.264 + AAC mic audio), up to 1080p, 30/60 fps, countdown, all UI hidden while recording.
   Stop by double-tapping the screen, Volume Down, or the notification. Saved to **Movies/VStage**.

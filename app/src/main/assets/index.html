@@ -21,9 +21,11 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .dot.ok{background:#3ddc84}.dot.warn{background:#ffb020}.dot.bad{background:#ff5a5a}
 #pip{position:fixed;top:calc(env(safe-area-inset-top) + 58px);right:12px;width:92px;aspect-ratio:3/4;border-radius:14px;overflow:hidden;border:2px solid rgba(255,255,255,.25);background:#111;display:none}
 #pip video{width:100%;height:100%;object-fit:cover}
-.dock{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 10px);height:66px;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:22px;display:grid;grid-template-columns:repeat(6,1fr);align-items:center}
+.dock{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 10px);height:66px;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:22px;display:grid;grid-template-columns:repeat(7,1fr);align-items:center}
 .tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--mute);padding:6px 0}
-.tab i{font-style:normal;font-size:20px;line-height:1}
+.tab i{font-style:normal;font-size:19px;line-height:1}
+.voice .chip{min-width:84px;text-align:center}
+#vtStatus{font-weight:600;min-height:20px}
 .tab.on{color:var(--ink)}
 .tab.on i{filter:drop-shadow(0 0 6px var(--accent))}
 #recBtn{justify-self:center;width:66px;height:66px;margin-top:-30px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 6px 22px rgba(0,0,0,.45);border:4px solid rgba(255,255,255,.35);background-clip:padding-box}
@@ -162,6 +164,20 @@ body.rec.showtimer.going #timer{display:flex}
   <div class="note" id="mouthNote"></div>
 </div>
 
+<div class="sheet" id="p-voice">
+  <h3>Voice changer <button data-close>×</button></h3>
+  <div class="chips voice" data-key="voice">
+    <button class="chip big" data-v="off">🙂 Normal</button><button class="chip big" data-v="x">😈 2011X</button>
+    <button class="chip" data-v="deep">Deep</button><button class="chip" data-v="chipmunk">Chipmunk</button>
+    <button class="chip" data-v="robot">Robot</button><button class="chip" data-v="ghost">Ghost</button>
+    <button class="chip" data-v="glitch">Glitch</button><button class="chip" data-v="radio">Radio</button>
+  </div>
+  <div class="note" id="voiceDesc"></div>
+  <div class="btns" style="margin-top:12px"><button class="btn pri" id="vtBtn">🎤 Test my voice</button></div>
+  <div class="note" id="vtStatus"></div>
+  <div class="note">The voice change is saved into your MP4 recording. “Record microphone audio” must be on (⚙️ Video tab).</div>
+</div>
+
 <div class="sheet" id="p-bg">
   <h3>Background <button data-close>×</button></h3>
   <div class="chips" data-key="bg">
@@ -203,6 +219,7 @@ body.rec.showtimer.going #timer{display:flex}
     <li><b>🤸 Pose</b> — it follows your face with the front camera, or moves on its own in Auto.</li>
     <li><b>👄 Mouth</b> — copy your mouth, move when you talk, or pick A / I / U / E / O.</li>
     <li><b>🟩 BG</b> — green screen, blue screen, colors, your camera or a picture.</li>
+    <li><b>🎙️ Voice</b> — change your voice: 2011X demon, deep, robot, ghost…</li>
     <li>Tap <b style="color:#ff3b30">●</b> to record an <b>MP4</b>.</li>
   </ol>
   <div class="btns" style="margin-top:12px"><button class="btn pri" data-close>Let's go</button></div>
@@ -213,6 +230,7 @@ body.rec.showtimer.going #timer{display:flex}
   <button class="tab" data-p="p-pose"><i>🤸</i>Pose</button>
   <button id="recBtn" aria-label="Record"><span></span></button>
   <button class="tab" data-p="p-mouth"><i>👄</i>Mouth</button>
+  <button class="tab" data-p="p-voice"><i>🎙️</i>Voice</button>
   <button class="tab" data-p="p-bg"><i>🟩</i>BG</button>
   <button class="tab" data-p="p-rec"><i>⚙️</i>Video</button>
 </nav>
@@ -244,7 +262,7 @@ const IDQ = new THREE.Quaternion();
 /* ================= settings ================= */
 const DEF = { track: 'camera', arms: 'relaxed', expr: 'neutral', exprAmt: 1, idle: 0.6, smooth: 0.5, mirror: true, camBlink: true, pip: true,
   mouth: 'camera', open: 0.8, voiceGain: 1, bg: 'green', bgColor: '#ff66aa', frame: 'bust',
-  mic: true, quality: '12', fps: '30', countdown: '3', timer: false, seen: false };
+  mic: true, voice: 'off', quality: '12', fps: '30', countdown: '3', timer: false, seen: false };
 const S = Object.assign({}, DEF);
 try { Object.assign(S, JSON.parse(localStorage.getItem('vstage') || '{}')); } catch (e) {}
 const save = () => { try { localStorage.setItem('vstage', JSON.stringify(S)); } catch (e) {} };
@@ -929,6 +947,8 @@ function onChange(k) {
   if (k === 'mirror') { T.neutral = null; applyBg(); }
   if (k === 'pip') applyPip();
   if (k === 'timer') document.body.classList.toggle('showtimer', !!S.timer);
+  if (k === 'voice') { voiceDesc(); if (S.voice !== 'off' && !S.mic) { S.mic = true; save(); syncUI(); toast('Microphone recording turned on for the voice changer.'); } }
+  if (k === 'mic' && !S.mic && S.voice !== 'off') toast('Voice changer needs microphone audio — your video will be silent.');
 }
 $('#centerBtn').onclick = () => { if (T.raw) { T.neutral = { ...T.raw }; toast('Centered!'); } else toast('Look at the front camera first.'); };
 
@@ -952,7 +972,7 @@ async function countdown() {
   if (REC.state !== 'countdown') return;
   $('#count').style.display = 'none';
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-  N.beginRecording(innerWidth > innerHeight, (parseInt(S.quality, 10) || 12) * 1000000, parseInt(S.fps, 10) || 30);
+  N.beginRecording(innerWidth > innerHeight, (parseInt(S.quality, 10) || 12) * 1000000, parseInt(S.fps, 10) || 30, S.mic ? (S.voice || 'off') : 'off');
 }
 window.vstageNative = (type, msg) => {
   if (type === 'ready') countdown();
@@ -960,6 +980,7 @@ window.vstageNative = (type, msg) => {
   else if (type === 'saved') { endRec(); openPanel('saved'); }
   else if (type === 'cancelled') { endRec(); if (msg) toast(msg); }
   else if (type === 'error') { endRec(); toast(msg || 'Recording failed.', 6000); }
+  else if (type === 'voiceTest') voiceTestState(msg);
 };
 window.vstageResume = () => { if (S.track === 'camera' && !T.stream) startCamera(); };
 // double-tap anywhere to stop while recording
@@ -971,6 +992,35 @@ addEventListener('pointerdown', () => {
 $('#savedPlay').onclick = () => N && N.openLast(); $('#savedShare').onclick = () => N && N.shareLast();
 $('#lastPlay').onclick = () => isApp ? N.openLast() : toast('Only in the Android app.');
 $('#lastShare').onclick = () => isApp ? N.shareLast() : toast('Only in the Android app.');
+
+/* ================= voice changer ================= */
+const VOICE_DESC = {
+  off: 'Your normal voice.',
+  x: '2011X-style demon: pitched way down, an extra monster voice an octave lower, growl, grit and a dark echo.',
+  deep: 'Big deep voice with a little room echo.',
+  chipmunk: 'High and squeaky.',
+  robot: 'Metallic robot buzz.',
+  ghost: 'Thin, airy and haunted with long echoes.',
+  glitch: 'Stutters and crunches like a broken game.',
+  radio: 'Old walkie-talkie / radio.'
+};
+function voiceDesc() { $('#voiceDesc').textContent = VOICE_DESC[S.voice] || ''; }
+$('#vtBtn').onclick = () => {
+  if (!isApp) return toast('Voice test works in the VStage Android app.');
+  if (VO.an) stopMic();   // free the mic for the test
+  $('#vtBtn').disabled = true;
+  N.testVoice(S.voice || 'off');
+};
+function voiceTestState(st) {
+  const el = $('#vtStatus');
+  if (st === 'listening') el.textContent = '🔴 Speak now… (3 seconds)';
+  else if (st === 'playing') el.textContent = '🔊 Playing it back…';
+  else {
+    el.textContent = st === 'done' ? 'Sounds good? Hit ● to record with this voice.' : st === 'busy' ? 'Stop recording first.' : 'Microphone not available — allow it and try again.';
+    $('#vtBtn').disabled = false;
+    if (S.mouth === 'voice') ensureMic();
+  }
+}
 
 /* ================= main loop ================= */
 let last = performance.now();
@@ -986,7 +1036,7 @@ function loop(now) {
 
 /* ================= start ================= */
 (async () => {
-  syncUI(); applyBg(); document.body.classList.toggle('showtimer', !!S.timer);
+  syncUI(); applyBg(); voiceDesc(); document.body.classList.toggle('showtimer', !!S.timer);
   loadDemo();
   $('#boot').remove();
   requestAnimationFrame(loop);

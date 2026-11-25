@@ -13,7 +13,6 @@ import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
-import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
@@ -34,7 +33,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * Records the screen (the avatar stage) to an MP4 (H.264 video + AAC mic audio)
+ * Records the screen (the avatar stage) to an MP4 (H.264 video + AAC mic audio, voice-changed)
  * saved in the phone gallery under Movies/VStage.
  *
  * Two steps so the countdown isn't in the video:
@@ -62,7 +61,7 @@ class RecorderService : Service() {
     private val main = Handler(Looper.getMainLooper())
     private var projection: MediaProjection? = null
     private var display: VirtualDisplay? = null
-    private var recorder: MediaRecorder? = null
+    private var recorder: Mp4Recorder? = null
     private var pfd: ParcelFileDescriptor? = null
     private var outUri: Uri? = null
     private var mic = true
@@ -136,7 +135,7 @@ class RecorderService : Service() {
     }
 
     /** Start writing the MP4. Called after the on-screen countdown. */
-    fun begin(landscape: Boolean, bitrate: Int, fps: Int) {
+    fun begin(landscape: Boolean, bitrate: Int, fps: Int, voice: String) {
         val proj = projection ?: return
         if (recorder != null) return
         try {
@@ -162,45 +161,33 @@ class RecorderService : Service() {
                 val l = even16((longSide * scale).roundToInt()); val s = even16((shortSide * scale).roundToInt())
                 val w = if (landscape) l else s
                 val h = if (landscape) s else l
+                var rec: Mp4Recorder? = null
                 try {
                     pfd?.close()
                     pfd = contentResolver.openFileDescriptor(uri, "rw") ?: throw IllegalStateException("Could not open the video file.")
-                    val r = if (Build.VERSION.SDK_INT >= 31) MediaRecorder(this) else @Suppress("DEPRECATION") MediaRecorder()
-                    if (mic) r.setAudioSource(MediaRecorder.AudioSource.MIC)
-                    r.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-                    r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-                    r.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-                    if (mic) {
-                        r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                        r.setAudioEncodingBitRate(160_000)
-                        r.setAudioSamplingRate(48_000)
-                        r.setAudioChannels(1)
+                    rec = Mp4Recorder(w, h, fps, bitrate, mic, voice, pfd!!.fileDescriptor) { msg ->
+                        main.post { Web.notify("error", msg); stop() }
                     }
-                    r.setVideoSize(w, h)
-                    r.setVideoFrameRate(fps)
-                    r.setVideoEncodingBitRate(bitrate)
-                    r.setOutputFile(pfd!!.fileDescriptor)
-                    r.setOnErrorListener { _, what, extra -> Log.e(TAG, "recorder error $what/$extra"); main.post { stop() } }
-                    r.prepare()
-                    if (display == null) {
+                    val d = display
+                    if (d == null) {
                         display = proj.createVirtualDisplay(
                             "VStageRecording", w, h, density,
-                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, r.surface, null, main
+                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, rec.inputSurface, null, main
                         )
                     } else {
-                        display!!.resize(w, h, density)
-                        display!!.surface = r.surface
+                        d.resize(w, h, density)
+                        d.surface = rec.inputSurface
                     }
-                    r.start()
-                    recorder = r
+                    rec.start()
+                    recorder = rec
                     recording = true
-                    Log.i(TAG, "recording ${w}x$h @ ${bitrate / 1000} kbps, mic=$mic")
+                    Log.i(TAG, "recording ${w}x$h @ ${bitrate / 1000} kbps, mic=$mic, voice=$voice")
                     Web.notify("recording")
                     return
                 } catch (e: Exception) {
                     Log.w(TAG, "recorder setup failed at $maxLong", e)
                     lastError = e
-                    try { recorder?.release() } catch (_: Exception) { }
+                    try { rec?.stop() } catch (_: Exception) { }
                     recorder = null
                 }
             }
@@ -231,12 +218,12 @@ class RecorderService : Service() {
         recording = false
         var ok = keepFile && recorder != null
         var kept = false
+        display?.release(); display = null
         recorder?.let {
-            try { it.stop() } catch (e: Exception) { Log.w(TAG, "stop failed", e); ok = false }
-            it.release()
+            val good = try { it.stop() } catch (e: Exception) { Log.w(TAG, "stop failed", e); false }
+            if (!good) ok = false
         }
         recorder = null
-        display?.release(); display = null
         try { projection?.stop() } catch (_: Exception) { }
         projection = null
         try { pfd?.close() } catch (_: Exception) { }

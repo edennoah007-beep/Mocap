@@ -240,8 +240,16 @@ class MainActivity : Activity() {
     inner class Bridge {
         @JavascriptInterface fun isApp(): Boolean = true
         @JavascriptInterface fun startRecording(mic: Boolean) { runOnUiThread { requestRecording(mic) } }
-        @JavascriptInterface fun beginRecording(landscape: Boolean, bitrate: Int, fps: Int) {
-            runOnUiThread { RecorderService.instance?.begin(landscape, bitrate, fps) }
+        @JavascriptInterface fun beginRecording(landscape: Boolean, bitrate: Int, fps: Int, voice: String) {
+            runOnUiThread { RecorderService.instance?.begin(landscape, bitrate, fps, voice) }
+        }
+        @JavascriptInterface fun testVoice(voice: String) {
+            if (!has(Manifest.permission.RECORD_AUDIO)) {
+                runOnUiThread { requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQ_PERMS) }
+                Web.notify("voiceTest", "error"); return
+            }
+            if (RecorderService.instance != null) { Web.notify("voiceTest", "busy"); return }
+            VoiceTester.run(voice, 3.5f) { state -> Web.notify("voiceTest", state) }
         }
         @JavascriptInterface fun stopRecording() { runOnUiThread { RecorderService.instance?.stop() } }
         @JavascriptInterface fun shareLast() { runOnUiThread { shareUri(RecorderService.lastUri) } }
