@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>VStage</title>
+<style>
+:root{--accent:#7c5cff;--accent2:#b8a6ff;--ink:#f3f0ff;--mute:#a9a3c4;--glass:rgba(18,16,28,.78);--line:rgba(255,255,255,.1);--bg:#00ff00}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--ink);font:15px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;user-select:none;-webkit-user-select:none}
+#stage{position:fixed;inset:0;background:var(--bg)}
+#bgImg,#bgVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+#bgVideo.mirror,#pip video.mirror{transform:scaleX(-1)}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.top{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.pill{pointer-events:auto;background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13px;display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
+.brand{font-weight:700;letter-spacing:.3px}
+.brand b{color:var(--accent2)}
+.dot{width:8px;height:8px;border-radius:50%;background:#888;flex:none}
+.dot.ok{background:#3ddc84}.dot.warn{background:#ffb020}.dot.bad{background:#ff5a5a}
+#pip{position:fixed;top:calc(env(safe-area-inset-top) + 58px);right:12px;width:92px;aspect-ratio:3/4;border-radius:14px;overflow:hidden;border:2px solid rgba(255,255,255,.25);background:#111;display:none}
+#pip video{width:100%;height:100%;object-fit:cover}
+.dock{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 10px);height:66px;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:22px;display:grid;grid-template-columns:repeat(6,1fr);align-items:center}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--mute);padding:6px 0}
+.tab i{font-style:normal;font-size:20px;line-height:1}
+.tab.on{color:var(--ink)}
+.tab.on i{filter:drop-shadow(0 0 6px var(--accent))}
+#recBtn{justify-self:center;width:66px;height:66px;margin-top:-30px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 6px 22px rgba(0,0,0,.45);border:4px solid rgba(255,255,255,.35);background-clip:padding-box}
+#recBtn span{width:44px;height:44px;border-radius:50%;background:#ff3b30;display:block;transition:.2s}
+#recBtn.busy span{border-radius:10px;width:30px;height:30px}
+.sheet{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 86px);max-height:56vh;overflow:auto;background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:20px;padding:14px 14px 16px;transform:translateY(14px);opacity:0;pointer-events:none;transition:.18s;touch-action:pan-y}
+.sheet.open{transform:none;opacity:1;pointer-events:auto}
+.sheet h3{margin:0 0 10px;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+.sheet h3 button{color:var(--mute);font-size:20px;padding:0 4px}
+.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--mute);margin:14px 0 7px}
+.lbl:first-of-type{margin-top:4px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{padding:9px 13px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid transparent;font-size:14px}
+.chip.on{background:var(--accent);border-color:var(--accent2)}
+.chip.big{padding:12px 16px}
+.mouth .chip{min-width:46px;text-align:center}
+.row{display:flex;align-items:center;gap:10px;margin:8px 0}
+.row label{flex:1;font-size:14px}
+input[type=range]{flex:1.4;accent-color:var(--accent)}
+.sw{position:relative;width:46px;height:27px;flex:none}
+.sw input{opacity:0;width:0;height:0}
+.sw span{position:absolute;inset:0;border-radius:99px;background:rgba(255,255,255,.18);transition:.2s}
+.sw span:after{content:"";position:absolute;left:3px;top:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+span{background:var(--accent)}
+.sw input:checked+span:after{transform:translateX(19px)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.1);font-weight:600}
+.btn.pri{background:var(--accent)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns .btn{flex:1}
+.note{font-size:12.5px;color:var(--mute);margin-top:8px}
+.info{font-size:13px;background:rgba(255,255,255,.06);border-radius:12px;padding:9px 11px;margin-top:10px}
+.swatch{width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.4);padding:0;overflow:hidden}
+.swatch input{width:60px;height:60px;margin:-12px;border:0;padding:0;background:none}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 60px);transform:translate(-50%,-10px);background:rgba(20,18,30,.92);border:1px solid var(--line);padding:10px 16px;border-radius:14px;font-size:14px;max-width:88vw;text-align:center;opacity:0;transition:.2s;pointer-events:none;z-index:9}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#count{position:fixed;inset:0;display:none;place-items:center;pointer-events:none;z-index:8}
+#count b{font-size:120px;font-weight:800;color:#fff;text-shadow:0 4px 30px rgba(0,0,0,.6)}
+#count p{position:absolute;bottom:18%;left:0;right:0;text-align:center;font-size:16px;text-shadow:0 2px 10px #000}
+#timer{position:fixed;top:calc(env(safe-area-inset-top) + 12px);left:14px;display:none;align-items:center;gap:6px;font:600 14px ui-monospace,monospace;text-shadow:0 1px 4px #000}
+#timer:before{content:"";width:10px;height:10px;border-radius:50%;background:#ff3b30}
+body.rec .top,body.rec .dock,body.rec .sheet,body.rec #pip{display:none!important}
+body.rec.showtimer.going #timer{display:flex}
+#saved .btns{margin-top:12px}
+#boot{position:fixed;inset:0;display:grid;place-items:center;background:#101014;z-index:20;text-align:center;padding:30px}
+#boot p{color:var(--mute);max-width:320px}
+.spin{width:38px;height:38px;border:4px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 14px}
+@keyframes sp{to{transform:rotate(360deg)}}
+#welcome ol{margin:6px 0 0;padding-left:20px;font-size:14px}
+#welcome li{margin:5px 0}
+.hide{display:none!important}
+@media (orientation:landscape){.sheet{left:auto;width:min(440px,58vw);max-height:calc(100vh - 110px)}.dock{left:auto;width:min(440px,58vw)}}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+  "@pixiv/three-vrm":"https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.1.0/lib/three-vrm.module.min.js"
+}}
+</script>
+</head>
+<body>
+<div id="stage"><img id="bgImg" alt=""><video id="bgVideo" class="mirror" playsinline muted></video></div>
+<canvas id="c"></canvas>
+<video id="cam" playsinline muted class="hide"></video>
+
+<div class="top">
+  <div class="pill brand">V<b>Stage</b></div>
+  <div class="pill" id="status"><span class="dot" id="sdot"></span><span id="stxt">Starting…</span></div>
+</div>
+<div id="pip"><video id="pipVid" playsinline muted class="mirror"></video></div>
+<div id="timer">00:00</div>
+<div id="count"><b id="countN">3</b><p>Double-tap the screen or press Volume Down to stop</p></div>
+<div id="toast"></div>
+
+<!-- ===== panels ===== -->
+<div class="sheet" id="p-model">
+  <h3>Your 3D model <button data-close>×</button></h3>
+  <div class="btns">
+    <label class="btn pri">📂 Upload model<input id="modelFile" type="file" accept=".vrm,.glb,.gltf,.fbx" class="hide"></label>
+    <button class="btn" id="demoBtn">✨ Demo avatar</button>
+  </div>
+  <div class="note">Works with <b>.vrm</b> (VRoid), <b>.glb</b>, <b>.gltf</b> and <b>.fbx</b> (Mixamo). It's posed automatically — T-pose arms come down and it starts moving like a VTuber.</div>
+  <div class="info" id="modelInfo">Demo avatar</div>
+  <div class="lbl">Camera shot</div>
+  <div class="chips" data-key="frame">
+    <button class="chip" data-v="face">Face</button><button class="chip" data-v="bust">Bust</button>
+    <button class="chip" data-v="half">Half body</button><button class="chip" data-v="full">Full body</button>
+  </div>
+  <div class="note">Pinch to zoom, drag to turn, two fingers to move.</div>
+  <div class="btns" style="margin-top:10px"><button class="btn" id="turnBtn">↻ Turn around</button><button class="btn" id="reframeBtn">⌖ Reset view</button></div>
+</div>
+
+<div class="sheet" id="p-pose">
+  <h3>Pose &amp; tracking <button data-close>×</button></h3>
+  <div class="lbl">Movement</div>
+  <div class="chips" data-key="track">
+    <button class="chip big" data-v="camera">📷 Follow me</button><button class="chip big" data-v="auto">🤖 Auto (no camera)</button>
+  </div>
+  <div class="lbl">Arms</div>
+  <div class="chips" data-key="arms">
+    <button class="chip" data-v="relaxed">Relaxed</button><button class="chip" data-v="wave">👋 Wave</button>
+    <button class="chip" data-v="cheer">🙌 Cheer</button><button class="chip" data-v="hips">Hands on hips</button>
+    <button class="chip" data-v="think">🤔 Think</button><button class="chip" data-v="camera">📷 Copy my arms</button>
+  </div>
+  <div class="lbl">Face expression</div>
+  <div class="chips" data-key="expr">
+    <button class="chip" data-v="neutral">😐 Neutral</button><button class="chip" data-v="happy">😊 Happy</button>
+    <button class="chip" data-v="angry">😠 Angry</button><button class="chip" data-v="sad">😢 Sad</button>
+    <button class="chip" data-v="surprised">😮 Surprised</button><button class="chip" data-v="relaxed">😌 Relaxed</button>
+  </div>
+  <div class="row"><label>Expression strength</label><input type="range" min="0" max="1" step="0.05" data-key="exprAmt"></div>
+  <div class="lbl">Fine tune</div>
+  <div class="row"><label>Idle motion</label><input type="range" min="0" max="1" step="0.05" data-key="idle"></div>
+  <div class="row"><label>Smoothing</label><input type="range" min="0" max="1" step="0.05" data-key="smooth"></div>
+  <div class="row"><label>Mirror (move like a mirror)</label><span class="sw"><input type="checkbox" data-key="mirror"><span></span></span></div>
+  <div class="row"><label>Blink with my eyes</label><span class="sw"><input type="checkbox" data-key="camBlink"><span></span></span></div>
+  <div class="row"><label>Show camera preview</label><span class="sw"><input type="checkbox" data-key="pip"><span></span></span></div>
+  <div class="btns" style="margin-top:10px"><button class="btn" id="centerBtn">⌖ Center my head</button></div>
+  <div class="note">Look straight at the screen and tap “Center” if the avatar looks tilted.</div>
+</div>
+
+<div class="sheet" id="p-mouth">
+  <h3>Mouth <button data-close>×</button></h3>
+  <div class="lbl">Automatic</div>
+  <div class="chips mouth" data-key="mouth">
+    <button class="chip big" data-v="camera">📷 Copy my mouth</button><button class="chip big" data-v="voice">🎤 Move when I talk</button>
+  </div>
+  <div class="lbl">Hold a mouth shape</div>
+  <div class="chips mouth" data-key="mouth">
+    <button class="chip" data-v="closed">Closed</button><button class="chip" data-v="aa">A</button><button class="chip" data-v="ih">I</button>
+    <button class="chip" data-v="ou">U</button><button class="chip" data-v="ee">E</button><button class="chip" data-v="oh">O</button>
+    <button class="chip" data-v="smile">Smile</button>
+  </div>
+  <div class="row"><label>How open</label><input type="range" min="0" max="1" step="0.05" data-key="open"></div>
+  <div class="row"><label>Voice sensitivity</label><input type="range" min="0.2" max="3" step="0.1" data-key="voiceGain"></div>
+  <div class="note" id="mouthNote"></div>
+</div>
+
+<div class="sheet" id="p-bg">
+  <h3>Background <button data-close>×</button></h3>
+  <div class="chips" data-key="bg">
+    <button class="chip big" data-v="green">🟩 Green screen</button><button class="chip big" data-v="blue">🟦 Blue screen</button>
+    <button class="chip" data-v="black">Black</button><button class="chip" data-v="white">White</button>
+    <button class="chip" data-v="color">Custom color</button><button class="chip" data-v="camera">📷 My camera</button><button class="chip" data-v="image">🖼 Picture</button>
+  </div>
+  <div class="row" id="colorRow"><label>Custom color</label><span class="swatch"><input type="color" id="bgColor"></span></div>
+  <div class="btns" id="imgRow"><label class="btn">🖼 Choose picture<input id="bgFile" type="file" accept="image/*" class="hide"></label></div>
+  <div class="note">Green screen is pure #00FF00. In CapCut / any editor use <b>Chroma key</b> on the green to cut your avatar out.</div>
+</div>
+
+<div class="sheet" id="p-rec">
+  <h3>Recording <button data-close>×</button></h3>
+  <div class="row"><label>Record microphone audio</label><span class="sw"><input type="checkbox" data-key="mic"><span></span></span></div>
+  <div class="lbl">Quality</div>
+  <div class="chips" data-key="quality">
+    <button class="chip" data-v="6">Standard</button><button class="chip" data-v="12">High</button><button class="chip" data-v="20">Max</button>
+  </div>
+  <div class="lbl">Frame rate</div>
+  <div class="chips" data-key="fps"><button class="chip" data-v="30">30 fps</button><button class="chip" data-v="60">60 fps</button></div>
+  <div class="lbl">Countdown</div>
+  <div class="chips" data-key="countdown"><button class="chip" data-v="0">Off</button><button class="chip" data-v="3">3 s</button><button class="chip" data-v="5">5 s</button></div>
+  <div class="row"><label>Show timer in video</label><span class="sw"><input type="checkbox" data-key="timer"><span></span></span></div>
+  <div class="note">Videos are saved as <b>MP4</b> to your gallery in <b>Movies/VStage</b>. While recording all buttons hide — double-tap the screen, press <b>Volume Down</b>, or use the notification to stop.</div>
+  <div class="btns" style="margin-top:10px"><button class="btn" id="lastPlay">▶ Last video</button><button class="btn" id="lastShare">↗ Share last</button></div>
+</div>
+
+<div class="sheet" id="saved">
+  <h3>Saved MP4 ✓ <button data-close>×</button></h3>
+  <div>Your video is in your gallery: <b>Movies/VStage</b>.</div>
+  <div class="btns"><button class="btn pri" id="savedPlay">▶ Play</button><button class="btn" id="savedShare">↗ Share</button></div>
+</div>
+
+<div class="sheet" id="welcome">
+  <h3>Welcome to VStage 👋 <button data-close>×</button></h3>
+  <ol>
+    <li><b>🧍 Model</b> — upload your 3D model (.vrm / .glb / .fbx) or keep the demo.</li>
+    <li><b>🤸 Pose</b> — it follows your face with the front camera, or moves on its own in Auto.</li>
+    <li><b>👄 Mouth</b> — copy your mouth, move when you talk, or pick A / I / U / E / O.</li>
+    <li><b>🟩 BG</b> — green screen, blue screen, colors, your camera or a picture.</li>
+    <li>Tap <b style="color:#ff3b30">●</b> to record an <b>MP4</b>.</li>
+  </ol>
+  <div class="btns" style="margin-top:12px"><button class="btn pri" data-close>Let's go</button></div>
+</div>
+
+<nav class="dock">
+  <button class="tab" data-p="p-model"><i>🧍</i>Model</button>
+  <button class="tab" data-p="p-pose"><i>🤸</i>Pose</button>
+  <button id="recBtn" aria-label="Record"><span></span></button>
+  <button class="tab" data-p="p-mouth"><i>👄</i>Mouth</button>
+  <button class="tab" data-p="p-bg"><i>🟩</i>BG</button>
+  <button class="tab" data-p="p-rec"><i>⚙️</i>Video</button>
+</nav>
+
+<div id="boot"><div><div class="spin"></div><b>Loading VStage…</b><p id="bootMsg">The first start needs internet to download the 3D engine.</p></div></div>
+<script>
+setTimeout(function(){ if(!window.__vstageBooted){ var m=document.getElementById('bootMsg'); m.innerHTML='Still loading… VStage needs an internet connection the first time it starts. Check Wi-Fi / mobile data, then reopen the app.'; } }, 15000);
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+
+window.__vstageBooted = true;
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const N = window.VStage;
+const isApp = !!(N && N.isApp && N.isApp());
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = THREE.MathUtils.lerp;
+const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const IDQ = new THREE.Quaternion();
+
+/* ================= settings ================= */
+const DEF = { track: 'camera', arms: 'relaxed', expr: 'neutral', exprAmt: 1, idle: 0.6, smooth: 0.5, mirror: true, camBlink: true, pip: true,
+  mouth: 'camera', open: 0.8, voiceGain: 1, bg: 'green', bgColor: '#ff66aa', frame: 'bust',
+  mic: true, quality: '12', fps: '30', countdown: '3', timer: false, seen: false };
+const S = Object.assign({}, DEF);
+try { Object.assign(S, JSON.parse(localStorage.getItem('vstage') || '{}')); } catch (e) {}
+const save = () => { try { localStorage.setItem('vstage', JSON.stringify(S)); } catch (e) {} };
+
+let toastT;
+function toast(msg, ms = 2600) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms); }
+function status(txt, cls = '') { $('#stxt').textContent = txt; $('#sdot').className = 'dot ' + cls; }
+
+/* ================= renderer / scene ================= */
+const canvas = $('#c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.setClearColor(0x000000, 0);
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.5;
+const camera = new THREE.PerspectiveCamera(30, 1, 0.02, 100);
+camera.position.set(0, 1.35, 2.4);
+scene.add(camera);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.12; controls.target.set(0, 1.3, 0);
+controls.minDistance = 0.2; controls.maxDistance = 12;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9a90c0, 1.4));
+const key = new THREE.DirectionalLight(0xffffff, 1.8); key.position.set(1.2, 2.5, 3); scene.add(key);
+const rim = new THREE.DirectionalLight(0xc8b8ff, 0.9); rim.position.set(-2, 2, -2); scene.add(rim);
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+let resizeT;
+addEventListener('resize', () => { resize(); clearTimeout(resizeT); resizeT = setTimeout(() => frameShot(S.frame), 200); });
+resize();
+
+/* ================= humanoid bone matching ================= */
+function tokens(name) {
+  return name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+}
+const JUNK = new Set(['j', 'bip', 'bip01', 'bip001', 'c', 'def', 'org', 'mch', 'cc', 'base', 'armature', 'rig', 'character', 'jnt', 'joint', 'bn', 'sk', 'b', 'bone', 'skeleton', 'root']);
+const PARTS = {
+  Shoulder: ['shoulder', 'clavicle', 'collar', 'collarbone', 'shldr'],
+  UpperArm: ['arm', 'upperarm', 'uparm', 'humerus'],
+  LowerArm: ['forearm', 'lowerarm', 'elbow', 'loarm'],
+  Hand: ['hand', 'wrist']
+};
+const depthOf = o => { let d = 0; while (o.parent) { d++; o = o.parent; } return d; };
+function autoMap(bones) {
+  const map = {};
+  const info = bones.map(b => {
+    const t = tokens(b.name || '').filter(x => !/^mixamorig\d*$/.test(x));
+    const side = t.some(x => x === 'left' || x === 'l') ? 'left' : t.some(x => x === 'right' || x === 'r') ? 'right' : null;
+    const core = t.filter(x => !['left', 'right', 'l', 'r'].includes(x) && !JUNK.has(x)).join('');
+    return { b, side, core, d: depthOf(b) };
+  }).sort((a, b) => a.d - b.d);
+  const put = (slot, b) => { if (!map[slot]) map[slot] = b; };
+  for (const i of info) {
+    if (!i.side) {
+      if (['hips', 'hip', 'pelvis', 'lowertorso'].includes(i.core)) put('hips', i.b);
+      else if (/^neck\d*$/.test(i.core)) put('neck', i.b);
+      else if (i.core === 'head') put('head', i.b);
+      else if (['jaw', 'lowerjaw', 'jawbone', 'jaw1', 'jawroot', 'chin'].includes(i.core)) put('jaw', i.b);
+    } else {
+      for (const [part, names] of Object.entries(PARTS)) if (names.includes(i.core)) put(i.side + part, i.b);
+    }
+  }
+  const sp = info.filter(i => !i.side && /^(spine\d*|chest\d*|upperchest|abdomen\d*|torso|uppertorso)$/.test(i.core));
+  const chestNamed = sp.find(i => i.core === 'chest' || i.core === 'uppertorso');
+  const upper = sp.find(i => i.core === 'upperchest');
+  const others = sp.filter(i => i !== chestNamed && i !== upper);
+  if (others[0]) map.spine = others[0].b;
+  if (chestNamed) map.chest = chestNamed.b; else if (others.length > 1) map.chest = others[others.length - 1].b;
+  if (upper) map.upperChest = upper.b;
+  for (const s of ['left', 'right']) {
+    if (map[s + 'LowerArm'] && !map[s + 'Hand']) { const c = map[s + 'LowerArm'].children.find(o => o.isBone || o.children.length); if (c) map[s + 'Hand'] = c; }
+  }
+  return map;
+}
+function mapFromVRM(vrm) {
+  const h = vrm.humanoid, map = {};
+  const g = n => (h.getRawBoneNode ? h.getRawBoneNode(n) : h.getBoneNode(n));
+  for (const slot of ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head', 'jaw', 'leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm', 'leftHand', 'rightHand']) {
+    const b = g(slot); if (b) map[slot] = b;
+  }
+  return map;
+}
+
+/* ================= face / mouth shapes ================= */
+const norm = s => String(s).toLowerCase().replace(/[\s_\-\.:|]/g, '');
+const VIS = {
+  aa: ['aa', 'a', 'vaa', 'vrcvaa', 'fclmtha', 'mtha', 'moutha', 'visemeaa', 'あ', 'jawopen', 'mouthopen'],
+  ih: ['ih', 'i', 'vih', 'vrcvih', 'fclmthi', 'mthi', 'mouthi', 'visemeih', 'visemei', 'い'],
+  ou: ['ou', 'u', 'vou', 'vrcvou', 'fclmthu', 'mthu', 'mouthu', 'visemeou', 'visemeu', 'う', 'mouthpucker'],
+  ee: ['ee', 'e', 've', 'vrcve', 'fclmthe', 'mthe', 'mouthe', 'visemeee', 'visemee', 'え'],
+  oh: ['oh', 'o', 'voh', 'vrcvoh', 'fclmtho', 'mtho', 'moutho', 'visemeoh', 'visemeo', 'お', 'mouthfunnel'],
+  happy: ['happy', 'joy', 'smile', 'fclalljoy', 'fclmthjoy', 'mouthsmile', '笑い', 'にっこり'],
+  angry: ['angry', 'fclallangry', '怒り'],
+  sad: ['sad', 'sorrow', 'fclallsorrow', '困る', '悲しい'],
+  surprised: ['surprised', 'surprise', 'fclallsurprised', '驚き', 'びっくり'],
+  relaxed: ['relaxed', 'fun', 'fclallfun'],
+  blinkLeft: ['blinkleft', 'blinkl', 'eyeblinkleft', 'fcleyeclosel', 'winkl', 'ウィンク'],
+  blinkRight: ['blinkright', 'blinkr', 'eyeblinkright', 'fcleyecloser', 'winkr', 'ウィンク右'],
+  blink: ['blink', 'eyeclose', 'fcleyeclose', 'eyesclosed', 'eyeblink', 'まばたき']
+};
+const KEYS = Object.keys(VIS);
+const ARKIT = ['eyeBlinkLeft', 'eyeLookDownLeft', 'eyeLookInLeft', 'eyeLookOutLeft', 'eyeLookUpLeft', 'eyeSquintLeft', 'eyeWideLeft', 'eyeBlinkRight', 'eyeLookDownRight', 'eyeLookInRight', 'eyeLookOutRight', 'eyeLookUpRight', 'eyeSquintRight', 'eyeWideRight', 'jawForward', 'jawLeft', 'jawRight', 'jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthLeft', 'mouthRight', 'mouthSmileLeft', 'mouthSmileRight', 'mouthFrownLeft', 'mouthFrownRight', 'mouthDimpleLeft', 'mouthDimpleRight', 'mouthStretchLeft', 'mouthStretchRight', 'mouthRollLower', 'mouthRollUpper', 'mouthShrugLower', 'mouthShrugUpper', 'mouthPressLeft', 'mouthPressRight', 'mouthLowerDownLeft', 'mouthLowerDownRight', 'mouthUpperUpLeft', 'mouthUpperUpRight', 'browDownLeft', 'browDownRight', 'browInnerUp', 'browOuterUpLeft', 'browOuterUpRight', 'cheekPuff', 'cheekSquintLeft', 'cheekSquintRight', 'noseSneerLeft', 'noseSneerRight', 'tongueOut'];
+const swapLR = n => n.endsWith('Left') ? n.slice(0, -4) + 'Right' : n.endsWith('Right') ? n.slice(0, -5) + 'Left' : n;
+
+class FaceRig {
+  constructor(obj, vrm, custom) {
+    this.vrm = vrm; this.custom = custom; this.targets = {}; this.arkit = null; this.used = []; this.count = 0;
+    if (custom) { this.hasMouth = true; this.count = 7; return; }
+    if (vrm) {
+      const em = vrm.expressionManager;
+      this.names = new Set(em ? em.expressions.map(e => e.expressionName) : []);
+      this.hasMouth = this.names.has('aa'); this.count = this.names.size; return;
+    }
+    const all = [];
+    obj.traverse(o => { if (o.isMesh && o.morphTargetDictionary && o.morphTargetInfluences) for (const [n, idx] of Object.entries(o.morphTargetDictionary)) all.push({ m: o, idx, n: norm(n) }); });
+    for (const k of KEYS) for (const c of VIS[k]) { const hits = all.filter(x => x.n === c); if (hits.length) { this.targets[k] = hits; break; } }
+    const ark = {}; let n = 0;
+    for (const name of ARKIT) { const hits = all.filter(x => x.n === name.toLowerCase()); if (hits.length) { ark[name] = hits; n++; } }
+    if (n >= 15) this.arkit = ark;
+    const set = new Set(); for (const h of Object.values(this.targets).flat()) set.add(h); if (this.arkit) for (const h of Object.values(this.arkit).flat()) set.add(h);
+    this.used = [...set];
+    this.hasMouth = !!this.targets.aa;
+    this.count = new Set(this.used.map(h => h.m.uuid + ':' + h.idx)).size;
+  }
+  apply(w, bs, mirror) {
+    if (this.custom) return this.custom(w);
+    if (this.vrm) {
+      const em = this.vrm.expressionManager; if (!em) return;
+      for (const k of KEYS) if (k !== 'blink' && this.names.has(k)) em.setValue(k, w[k] || 0);
+      if (!this.names.has('blinkLeft') && this.names.has('blink')) em.setValue('blink', Math.max(w.blinkLeft || 0, w.blinkRight || 0));
+      else if (this.names.has('blink')) em.setValue('blink', 0);
+      return;
+    }
+    for (const h of this.used) h.m.morphTargetInfluences[h.idx] = 0;
+    const put = (hits, v) => { if (!hits || !(v > 0)) return; for (const h of hits) h.m.morphTargetInfluences[h.idx] = Math.max(h.m.morphTargetInfluences[h.idx], clamp(v)); };
+    for (const k of KEYS) if (k !== 'blink') put(this.targets[k], w[k]);
+    if (!this.targets.blinkLeft) put(this.targets.blink, Math.max(w.blinkLeft || 0, w.blinkRight || 0));
+    if (this.arkit) {
+      if (bs) for (const name in this.arkit) put(this.arkit[name], bs[mirror ? swapLR(name) : name]);
+      else { // no camera data: drive perfect-sync shapes from the chosen mouth
+        put(this.arkit.jawOpen, Math.max(w.aa || 0, (w.oh || 0) * 0.7, (w.ee || 0) * 0.3, (w.ih || 0) * 0.25, (w.ou || 0) * 0.3));
+        put(this.arkit.mouthFunnel, w.oh); put(this.arkit.mouthPucker, w.ou);
+        put(this.arkit.mouthStretchLeft, w.ee); put(this.arkit.mouthStretchRight, w.ee);
+        put(this.arkit.mouthSmileLeft, Math.max(w.happy || 0, (w.ih || 0) * 0.6)); put(this.arkit.mouthSmileRight, Math.max(w.happy || 0, (w.ih || 0) * 0.6));
+        put(this.arkit.eyeBlinkLeft, w.blinkLeft); put(this.arkit.eyeBlinkRight, w.blinkRight);
+      }
+    }
+  }
+}
+
+/* ================= built-in demo avatar ================= */
+function gradTex() {
+  const d = new Uint8Array([90, 90, 90, 255, 180, 180, 180, 255, 255, 255, 255, 255]);
+  const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t;
+}
+function makeDemo() {
+  const G = gradTex();
+  const toon = c => new THREE.MeshToonMaterial({ color: c, gradientMap: G });
+  const flat = (c, o = 1) => new THREE.MeshBasicMaterial({ color: c, transparent: o < 1, opacity: o });
+  const SKIN = toon(0xffe1d2), HAIR = toon(0x5b3fd6), HOOD = toon(0xf4f1ff), DARK = toon(0x2b2540), ACC = toon(0xff5fa2);
+  const root = new THREE.Group(); root.name = 'Demo';
+  const J = (name, p, x, y, z) => { const o = new THREE.Object3D(); o.name = name; o.position.set(x, y, z); p.add(o); return o; };
+  const M = (geo, mat, p, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); p.add(m); return m; };
+  const hips = J('Hips', root, 0, 0.84, 0), spine = J('Spine', hips, 0, 0.1, 0), chest = J('Chest', spine, 0, 0.16, 0);
+  const neck = J('Neck', chest, 0, 0.19, 0), head = J('Head', neck, 0, 0.07, 0);
+  // legs + skirt
+  for (const s of [1, -1]) { M(new THREE.CapsuleGeometry(0.06, 0.6, 6, 12), DARK, hips, 0.08 * s, -0.44, 0); M(new THREE.SphereGeometry(0.07, 16, 12), ACC, hips, 0.08 * s, -0.81, 0.03, 1, 0.6, 1.5); }
+  M(new THREE.CylinderGeometry(0.15, 0.25, 0.24, 24), HAIR, hips, 0, -0.06, 0);
+  M(new THREE.CapsuleGeometry(0.135, 0.2, 6, 16), HOOD, spine, 0, 0.13, 0, 1.05, 1, 0.78);
+  M(new THREE.TorusGeometry(0.075, 0.025, 8, 20), ACC, chest, 0, 0.13, 0, 1, 1, 1).rotation.x = Math.PI / 2;
+  M(new THREE.CylinderGeometry(0.042, 0.048, 0.11, 12), SKIN, neck, 0, 0.02, 0);
+  // head
+  M(new THREE.SphereGeometry(0.19, 32, 24), SKIN, head, 0, 0.16, 0, 1, 0.96, 0.95);
+  M(new THREE.SphereGeometry(0.205, 32, 24), HAIR, head, 0, 0.19, -0.03, 1.02, 1, 0.98);
+  M(new THREE.SphereGeometry(0.2, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.42), HAIR, head, 0, 0.21, 0.02, 1.04, 0.95, 1.02);
+  for (const s of [1, -1]) {
+    M(new THREE.SphereGeometry(0.085, 16, 12), HAIR, head, 0.215 * s, 0.1, -0.05, 0.75, 1.7, 0.75);
+    M(new THREE.SphereGeometry(0.035, 12, 8), ACC, head, 0.19 * s, 0.25, -0.03, 1, 1, 1);
+  }
+  const F = { eyes: [], happyEyes: [], brows: [] };
+  const eyeGeo = new THREE.SphereGeometry(0.03, 20, 14);
+  for (const s of [1, -1]) {
+    const e = M(eyeGeo, flat(0x2a1f5c), head, 0.066 * s, 0.135, 0.172, 0.85, 1.2, 0.35);
+    F.eyes.push(e);
+    F.shine = F.shine || [];
+    F.shine.push(M(new THREE.SphereGeometry(0.0085, 8, 6), flat(0xffffff), head, 0.066 * s - 0.009, 0.148, 0.184));
+    const he = M(new THREE.TorusGeometry(0.026, 0.006, 6, 16, Math.PI), flat(0x2a1f5c), head, 0.066 * s, 0.128, 0.178); he.visible = false; F.happyEyes.push(he);
+    const b = M(new THREE.BoxGeometry(0.05, 0.009, 0.01), flat(0x3a2a7a), head, 0.066 * s, 0.19, 0.173); F.brows.push(b);
+    const bl = M(new THREE.CircleGeometry(0.024, 16), flat(0xff7aa8, 0.5), head, 0.105 * s, 0.098, 0.152); bl.rotation.y = 0.55 * s;
+  }
+  F.mouth = M(new THREE.CircleGeometry(0.03, 24), flat(0x9c1f43), head, 0, 0.072, 0.164);
+  F.tongue = M(new THREE.CircleGeometry(0.018, 16), flat(0xff6f8e), F.mouth, 0, -0.012, 0.001);
+  F.smile = M(new THREE.TorusGeometry(0.022, 0.0045, 6, 16, Math.PI), flat(0x9c1f43), head, 0, 0.08, 0.166); F.smile.rotation.z = Math.PI;
+  // arms in T-pose (they are relaxed automatically, like any uploaded model)
+  const map = { hips, spine, chest, neck, head };
+  for (const [s, side] of [[1, 'left'], [-1, 'right']]) {
+    const up = J(side === 'left' ? 'LeftUpperArm' : 'RightUpperArm', chest, 0.165 * s, 0.13, 0);
+    const lo = J(side === 'left' ? 'LeftLowerArm' : 'RightLowerArm', up, 0.25 * s, 0, 0);
+    const hd = J(side === 'left' ? 'LeftHand' : 'RightHand', lo, 0.23 * s, 0, 0);
+    M(new THREE.CapsuleGeometry(0.048, 0.18, 6, 12), HOOD, up, 0.125 * s, 0, 0).rotation.z = Math.PI / 2;
+    M(new THREE.CapsuleGeometry(0.045, 0.16, 6, 12), HOOD, lo, 0.11 * s, 0, 0).rotation.z = Math.PI / 2;
+    M(new THREE.SphereGeometry(0.045, 14, 10), SKIN, hd, 0.02 * s, 0, 0, 1, 1.1, 0.8);
+    map[side + 'UpperArm'] = up; map[side + 'LowerArm'] = lo; map[side + 'Hand'] = hd;
+  }
+  const custom = w => {
+    const open = clamp(Math.max(w.aa || 0, (w.oh || 0) * 0.8, (w.ou || 0) * 0.55, (w.ee || 0) * 0.45, (w.ih || 0) * 0.35, (w.surprised || 0) * 0.6));
+    const wide = 1 + (w.ee || 0) * 0.55 + (w.ih || 0) * 0.45 + (w.happy || 0) * 0.2 - (w.ou || 0) * 0.5 - (w.oh || 0) * 0.15;
+    F.mouth.visible = open > 0.04; F.mouth.scale.set(Math.max(0.35, wide), 0.12 + open * 1.05, 1);
+    F.tongue.visible = open > 0.35;
+    F.smile.visible = !F.mouth.visible;
+    const sm = 0.6 + (w.happy || 0) * 0.6 - (w.sad || 0) * 0.9 - (w.angry || 0) * 0.5;
+    F.smile.scale.set(1, sm, 1);
+    const happyEyes = (w.happy || 0) > 0.5 || (w.relaxed || 0) > 0.6;
+    const big = 1 + (w.surprised || 0) * 0.25;
+    F.eyes.forEach((e, i) => { const bl = i === 0 ? w.blinkLeft : w.blinkRight; e.visible = !happyEyes; e.scale.set(0.85 * big, 1.2 * big * Math.max(0.06, 1 - (bl || 0)), 0.35); });
+    F.happyEyes.forEach(e => e.visible = happyEyes);
+    F.shine.forEach((e, i) => e.visible = !happyEyes && ((i === 0 ? w.blinkLeft : w.blinkRight) || 0) < 0.5);
+    F.brows.forEach((b, i) => { const s = i === 0 ? 1 : -1; b.rotation.z = s * ((w.angry || 0) * -0.45 + (w.sad || 0) * 0.4); b.position.y = 0.19 + (w.surprised || 0) * 0.02 - (w.angry || 0) * 0.008; });
+  };
+  return { root, map, custom };
+}
+
+/* ================= avatar state ================= */
+const A = { holder: null, inner: null, obj: null, vrm: null, map: {}, rest: new Map(), face: null, rigged: false, arms: false, name: '', flip: false,
+  arm: { left: { up: V3(0.3, -1, 0.08).normalize(), lo: V3(0.15, -1, 0.25).normalize() }, right: { up: V3(-0.3, -1, 0.08).normalize(), lo: V3(-0.15, -1, 0.25).normalize() } } };
+
+function disposeObj(o) {
+  o.traverse(c => {
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); });
+  });
+}
+
+function setModel(obj, { vrm = null, map = null, custom = null, name = 'Model' } = {}) {
+  if (A.holder) { scene.remove(A.holder); try { disposeObj(A.holder); } catch (e) {} }
+  const holder = new THREE.Group(), inner = new THREE.Group();
+  holder.add(inner); inner.add(obj); scene.add(holder);
+  Object.assign(A, { holder, inner, obj, vrm, name, flip: false });
+  obj.traverse(o => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = false; } });
+  const bones = []; obj.traverse(o => { if (o.isBone) bones.push(o); });
+  A.map = map || (vrm ? mapFromVRM(vrm) : autoMap(bones));
+  A.rest = new Map();
+  for (const b of Object.values(A.map)) if (b) A.rest.set(b, b.quaternion.clone());
+  A.rigged = !!(A.map.head || A.map.neck);
+  A.arms = !!(A.map.leftUpperArm && A.map.leftLowerArm && A.map.rightUpperArm && A.map.rightLowerArm);
+
+  // stand on the floor, centered; non-VRM models are scaled to a human height
+  holder.updateMatrixWorld(true);
+  obj.traverse(o => { if (o.isSkinnedMesh) { o.skeleton.update(); o.computeBoundingBox && o.computeBoundingBox(); } });
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(V3()), c = box.getCenter(V3());
+  const h = size.y > 1e-6 ? size.y : 1;
+  const sc = vrm ? 1 : 1.6 / h;
+  inner.position.set(-c.x, -box.min.y, -c.z);
+  holder.scale.setScalar(sc);
+  holder.updateMatrixWorld(true);
+  // face the camera: the avatar's left arm must be on +x
+  if (A.map.leftUpperArm && A.map.rightUpperArm) {
+    const l = holder.worldToLocal(A.map.leftUpperArm.getWorldPosition(V3()));
+    const r = holder.worldToLocal(A.map.rightUpperArm.getWorldPosition(V3()));
+    if (l.x < r.x) { A.flip = true; }
+  }
+  holder.rotation.y = A.flip ? Math.PI : 0;
+  holder.updateMatrixWorld(true);
+  A.face = new FaceRig(obj, vrm, custom);
+  if (vrm) {
+    if (vrm.lookAt) vrm.lookAt.target = camera;
+    try { vrm.springBoneManager && vrm.springBoneManager.reset(); } catch (e) {}
+  }
+  for (const k of ['left', 'right']) { const s = k === 'left' ? 1 : -1; A.arm[k].up.set(0.3 * s, -1, 0.08).normalize(); A.arm[k].lo.set(0.15 * s, -1, 0.25).normalize(); }
+  updateModelInfo();
+  frameShot(S.frame);
+}
+
+function updateModelInfo() {
+  const f = A.face;
+  const parts = [];
+  parts.push(`<b>${escapeHtml(A.name)}</b>`);
+  parts.push(A.rigged ? `Skeleton: head ✓ · arms ${A.arms ? '✓' : '✗'}` : 'No skeleton found — the whole model follows your head');
+  parts.push(f && f.hasMouth ? `Mouth shapes ✓ (${f.count} face shapes)` : (A.map.jaw ? 'No mouth shapes — using the jaw bone' : 'No mouth shapes found in this model'));
+  $('#modelInfo').innerHTML = parts.join('<br>');
+  mouthNote();
+}
+function mouthNote() {
+  const f = A.face; let t = '';
+  if (f && !f.hasMouth && !A.map.jaw) t = 'This model has no mouth shapes (blendshapes / shape keys), so the mouth can’t move. VRM models from VRoid always have them.';
+  else if (S.mouth === 'voice') t = 'The mouth opens when the microphone hears you.';
+  else if (S.mouth === 'camera') t = S.track === 'camera' ? 'Copies your real mouth from the front camera.' : 'Turn on “Follow me” in Pose to copy your mouth.';
+  $('#mouthNote').textContent = t;
+}
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ================= camera shots ================= */
+function frameShot(kind) {
+  if (!A.holder) return;
+  A.holder.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(A.holder);
+  const top = box.max.y, bottom = box.min.y, h = Math.max(0.1, top - bottom);
+  const cx = (box.min.x + box.max.x) / 2, cz = (box.min.z + box.max.z) / 2;
+  const headY = A.map.head ? A.map.head.getWorldPosition(V3()).y : top - 0.14 * h;
+  const headZ = A.map.head ? A.map.head.getWorldPosition(V3()).z : cz;
+  let y0, y1, wNeed;
+  if (kind === 'face') { y0 = headY - 0.05 * h; y1 = top + 0.02 * h; wNeed = (y1 - y0) * 0.95; }
+  else if (kind === 'half') { y0 = headY - 0.5 * h; y1 = top + 0.04 * h; wNeed = 0.55 * h; }
+  else if (kind === 'full') { y0 = bottom - 0.04 * h; y1 = top + 0.04 * h; wNeed = 0.55 * h; }
+  else { y0 = headY - 0.3 * h; y1 = top + 0.04 * h; wNeed = 0.45 * h; }
+  if (!A.rigged && kind !== 'full') { y0 = bottom + (kind === 'face' ? 0.55 : kind === 'bust' ? 0.35 : 0.2) * h; y1 = top + 0.04 * h; wNeed = (y1 - y0) * 0.8; }
+  const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const span = y1 - y0;
+  const dist = Math.max((span / 2) / tan, (wNeed / 2) / (tan * camera.aspect));
+  const cy = (y0 + y1) / 2, tz = kind === 'face' || kind === 'bust' ? headZ : cz;
+  controls.target.set(cx, cy, tz);
+  camera.position.set(cx, cy, tz + dist);
+  camera.near = Math.max(0.01, dist / 100); camera.updateProjectionMatrix();
+  controls.update();
+}
+
+/* ================= model loading ================= */
+const draco = new DRACOLoader(); draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+const gltfLoader = new GLTFLoader(); gltfLoader.setDRACOLoader(draco); gltfLoader.setMeshoptDecoder(MeshoptDecoder);
+gltfLoader.register(p => new VRMLoaderPlugin(p));
+
+async function loadBuffer(buf, name, remember = true) {
+  const ext = name.split('.').pop().toLowerCase();
+  status('Loading model…', 'warn');
+  try {
+    if (ext === 'fbx') {
+      const obj = new FBXLoader().parse(buf, '');
+      setModel(obj, { name });
+    } else {
+      const data = ext === 'gltf' ? new TextDecoder().decode(buf) : buf;
+      const gltf = await new Promise((res, rej) => gltfLoader.parse(data, '', res, rej));
+      const vrm = gltf.userData.vrm;
+      if (vrm) {
+        try { VRMUtils.removeUnnecessaryVertices(gltf.scene); } catch (e) {}
+        try { if (VRMUtils.combineSkeletons) VRMUtils.combineSkeletons(gltf.scene); else if (VRMUtils.removeUnnecessaryJoints) VRMUtils.removeUnnecessaryJoints(gltf.scene); } catch (e) {}
+        VRMUtils.rotateVRM0(vrm);
+        vrm.humanoid.autoUpdateHumanBones = false;
+        setModel(vrm.scene, { vrm, name });
+      } else setModel(gltf.scene, { name });
+    }
+    if (remember) idbPut({ name, buf }).catch(() => {});
+    toast(A.rigged ? 'Model loaded — it’s posed and ready!' : 'Model loaded (no skeleton, so the whole model moves).');
+  } catch (e) {
+    console.error(e);
+    toast('Could not open that model: ' + (e && e.message ? e.message : e) + (ext === 'gltf' ? ' — try a .glb file instead.' : ''), 6000);
+  }
+  refreshStatus();
+}
+$('#modelFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  loadBuffer(await f.arrayBuffer(), f.name);
+};
+function loadDemo() { const d = makeDemo(); setModel(d.root, { map: d.map, custom: d.custom, name: 'Demo avatar' }); }
+$('#demoBtn').onclick = () => { loadDemo(); idbPut(null).catch(() => {}); };
+$('#turnBtn').onclick = () => { if (!A.holder) return; A.flip = !A.flip; A.holder.rotation.y = A.flip ? Math.PI : 0; };
+$('#reframeBtn').onclick = () => frameShot(S.frame);
+
+// remember the last model between app starts
+function idb() { return new Promise((res, rej) => { const r = indexedDB.open('vstage', 1); r.onupgradeneeded = () => r.result.createObjectStore('m'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function idbPut(v) { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('m', 'readwrite'); v ? tx.objectStore('m').put(v, 'last') : tx.objectStore('m').delete('last'); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }
+async function idbGet() { const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('m').objectStore('m').get('last'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+
+/* ================= tracking (front camera + MediaPipe) ================= */
+const MP_VER = '0.10.14';
+const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/vision_bundle.mjs`;
+const MP_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/wasm`;
+const MG = 'https://storage.googleapis.com/mediapipe-models';
+const FACE_URL = `${MG}/face_landmarker/face_landmarker/float16/latest/face_landmarker.task`;
+const POSE_URL = `${MG}/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task`;
+
+const T = { video: $('#cam'), stream: null, vision: null, fileset: null, face: null, pose: null, loadingFace: false, loadingPose: false,
+  faceOk: false, lastFace: -1e9, raw: null, neutral: null, head: { yaw: 0, pitch: 0, roll: 0, lean: 0 }, bs: {}, arms: null, lastTs: 0, n: 0, camErr: false };
+
+async function startCamera() {
+  if (T.stream || S.track !== 'camera') return;
+  try {
+    T.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }, audio: false });
+    T.video.srcObject = T.stream; await T.video.play().catch(() => {});
+    $('#pipVid').srcObject = T.stream; $('#pipVid').play().catch(() => {});
+    $('#bgVideo').srcObject = T.stream; $('#bgVideo').play().catch(() => {});
+    T.camErr = false; T.neutral = null;
+  } catch (e) {
+    console.warn(e); T.stream = null; T.camErr = true;
+  }
+  applyBg(); applyPip(); refreshStatus();
+}
+function stopCamera() {
+  if (T.stream) T.stream.getTracks().forEach(t => t.stop());
+  T.stream = null; T.faceOk = false; applyBg(); applyPip(); refreshStatus();
+}
+async function mpMake(Cls, opts) {
+  try { return await Cls.createFromOptions(T.fileset, { ...opts, baseOptions: { ...opts.baseOptions, delegate: 'GPU' } }); }
+  catch (e) { console.warn('GPU failed, using CPU', e); return await Cls.createFromOptions(T.fileset, { ...opts, baseOptions: { ...opts.baseOptions, delegate: 'CPU' } }); }
+}
+async function ensureVision() {
+  if (T.fileset) return;
+  T.vision = await import(MP_URL);
+  T.fileset = await T.vision.FilesetResolver.forVisionTasks(MP_WASM);
+}
+async function ensureFace() {
+  if (T.face || T.loadingFace) return; T.loadingFace = true; refreshStatus();
+  try {
+    await ensureVision();
+    T.face = await mpMake(T.vision.FaceLandmarker, { baseOptions: { modelAssetPath: FACE_URL }, runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true, minFaceDetectionConfidence: 0.4, minTrackingConfidence: 0.4 });
+  } catch (e) { console.error(e); toast('Could not load face tracking — check your internet. Auto mode still works.', 5000); }
+  T.loadingFace = false; refreshStatus();
+}
+async function ensurePose() {
+  if (T.pose || T.loadingPose) return; T.loadingPose = true; refreshStatus();
+  try {
+    await ensureVision();
+    T.pose = await mpMake(T.vision.PoseLandmarker, { baseOptions: { modelAssetPath: POSE_URL }, runningMode: 'VIDEO', numPoses: 1, minPoseDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+  } catch (e) { console.error(e); toast('Could not load arm tracking — check your internet.', 5000); }
+  T.loadingPose = false; refreshStatus();
+}
+const _m4 = new THREE.Matrix4(), _eu = new THREE.Euler();
+function trackStep(now) {
+  if (S.track !== 'camera' || !T.stream || !T.face) { T.faceOk = false; return; }
+  const v = T.video;
+  if (v.readyState < 2 || !v.videoWidth) return;
+  if (now - T.lastTs < 30) return; // ~30 tracking frames a second is plenty
+  const ts = Math.max(T.lastTs + 1, Math.round(now)); T.lastTs = ts;
+  let r;
+  try { r = T.face.detectForVideo(v, ts); } catch (e) { console.warn(e); return; }
+  if (r && r.facialTransformationMatrixes && r.facialTransformationMatrixes.length) {
+    _m4.fromArray(r.facialTransformationMatrixes[0].data);
+    _eu.setFromRotationMatrix(_m4, 'YXZ');
+    const raw = { yaw: _eu.y, pitch: _eu.x, roll: _eu.z, x: _m4.elements[12] };
+    if (!T.neutral) T.neutral = { ...raw };
+    T.raw = raw;
+    const s = S.mirror ? -1 : 1, n = T.neutral;
+    T.head.yaw = clamp(s * (raw.yaw - n.yaw), -1, 1);
+    T.head.pitch = clamp(raw.pitch - n.pitch, -0.8, 0.8);
+    T.head.roll = clamp(s * (raw.roll - n.roll), -0.7, 0.7);
+    T.head.lean = clamp(s * (raw.x - n.x) * 0.012, -0.25, 0.25);
+    const bs = {}; const cats = r.faceBlendshapes && r.faceBlendshapes[0] && r.faceBlendshapes[0].categories;
+    if (cats) for (const c of cats) bs[c.categoryName] = c.score;
+    T.bs = bs;
+    if (!T.faceOk) refreshStatusSoon();
+    T.faceOk = true; T.lastFace = now;
+  } else if (T.faceOk && now - T.lastFace > 700) { T.faceOk = false; refreshStatusSoon(); }
+  if (S.arms === 'camera' && T.pose && (T.n++ % 2 === 0)) {
+    try {
+      const p = T.pose.detectForVideo(v, ts);
+      if (p && p.worldLandmarks && p.worldLandmarks.length) T.arms = { w: p.worldLandmarks[0], at: now };
+    } catch (e) { console.warn(e); }
+  }
+}
+let stT; function refreshStatusSoon() { clearTimeout(stT); stT = setTimeout(refreshStatus, 50); }
+function refreshStatus() {
+  if (S.track === 'auto') return status('Auto pose', 'ok');
+  if (T.camErr) return status('No camera — Auto pose', 'bad');
+  if (T.loadingFace || (S.arms === 'camera' && T.loadingPose)) return status('Loading tracking…', 'warn');
+  if (!T.stream) return status('Starting camera…', 'warn');
+  if (!T.face) return status('Auto pose (tracking off)', 'warn');
+  return T.faceOk ? status('Following your face', 'ok') : status('Look at the camera', 'warn');
+}
+
+/* ================= voice → mouth ================= */
+const VO = { an: null, buf: null, ac: null, st: null, level: 0, vowel: 'aa', next: 0 };
+async function ensureMic() {
+  if (VO.an) { VO.ac.resume && VO.ac.resume(); return true; }
+  try {
+    VO.st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+    VO.ac = new (window.AudioContext || window.webkitAudioContext)();
+    const src = VO.ac.createMediaStreamSource(VO.st);
+    VO.an = VO.ac.createAnalyser(); VO.an.fftSize = 1024; src.connect(VO.an);
+    VO.buf = new Float32Array(VO.an.fftSize);
+    VO.ac.resume && VO.ac.resume();
+    return true;
+  } catch (e) { console.warn(e); toast('Microphone not available for the mouth.'); return false; }
+}
+function stopMic() { if (VO.st) VO.st.getTracks().forEach(t => t.stop()); if (VO.ac) VO.ac.close().catch(() => {}); VO.an = null; VO.ac = null; VO.st = null; }
+function voiceOpen(now) {
+  if (!VO.an) return 0;
+  VO.an.getFloatTimeDomainData(VO.buf);
+  let s = 0; for (let i = 0; i < VO.buf.length; i++) s += VO.buf[i] * VO.buf[i];
+  const rms = Math.sqrt(s / VO.buf.length);
+  const o = clamp((rms * 14 * S.voiceGain - 0.08) / 0.7);
+  VO.level += (o - VO.level) * (o > VO.level ? 0.6 : 0.25);
+  if (now > VO.next) { const r = Math.random(); VO.vowel = r < 0.45 ? 'aa' : r < 0.6 ? 'oh' : r < 0.75 ? 'ee' : r < 0.88 ? 'ih' : 'ou'; VO.next = now + 90 + Math.random() * 120; }
+  return VO.level;
+}
+
+/* ================= posing every frame ================= */
+const H = { yaw: 0, pitch: 0, roll: 0, lean: 0 };
+const W = { aa: 0, ih: 0, ou: 0, ee: 0, oh: 0, happy: 0, angry: 0, sad: 0, surprised: 0, relaxed: 0, blinkLeft: 0, blinkRight: 0 };
+const BL = { next: 2, t: -1 };
+const _q = new THREE.Quaternion(), _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _rootQ = new THREE.Quaternion(), _rootQi = new THREE.Quaternion();
+const _p1 = V3(), _p2 = V3(), _v = V3(), _d = V3();
+
+function worldRot(bone, D) { // rotate a bone by world-space rotation D, whatever its rig axes are
+  if (!bone || !bone.parent) return;
+  bone.parent.getWorldQuaternion(_q1);
+  _q2.copy(_q1).invert().multiply(D).multiply(_q1);
+  bone.quaternion.premultiply(_q2);
+  bone.updateWorldMatrix(false, true);
+}
+function modelRot(bone, Qm) { // rotation given in the avatar's own frame (faces +z, left = +x)
+  _q.copy(_rootQ).multiply(Qm).multiply(_rootQi);
+  worldRot(bone, _q);
+}
+function aimBone(bone, child, dirModel, torsoQ) {
+  if (!bone || !child) return;
+  bone.getWorldPosition(_p1); child.getWorldPosition(_p2);
+  _v.subVectors(_p2, _p1); if (_v.lengthSq() < 1e-12) return; _v.normalize();
+  _d.copy(dirModel).applyQuaternion(torsoQ).applyQuaternion(_rootQ).normalize();
+  _q.setFromUnitVectors(_v, _d);
+  worldRot(bone, _q);
+}
+const fracQ = (q, f) => new THREE.Quaternion().slerpQuaternions(IDQ, q, f);
+
+function idleHead(t) {
+  const k = S.idle;
+  return {
+    yaw: k * (0.16 * Math.sin(t * 0.45) + 0.06 * Math.sin(t * 1.27 + 1)),
+    pitch: k * (0.05 * Math.sin(t * 0.7 + 2) + 0.03 * Math.sin(t * 1.9)) - 0.02,
+    roll: k * (0.08 * Math.sin(t * 0.38 + 0.5) + 0.03 * Math.sin(t * 1.5)),
+    lean: k * 0.04 * Math.sin(t * 0.33)
+  };
+}
+function presetArm(name, side, t) {
+  const s = side === 'left' ? 1 : -1, k = S.idle;
+  const sway = k * 0.04 * Math.sin(t * 1.1 + (side === 'left' ? 0 : 1.7));
+  const rel = { up: V3(0.3 * s + sway * s, -1, 0.08 + sway), lo: V3(0.14 * s, -1, 0.28 + sway) };
+  switch (name) {
+    case 'wave': return side === 'right' ? { up: V3(-0.85, 0.42, 0.22), lo: V3(-0.12 + 0.5 * Math.sin(t * 7), 1, 0.18) } : rel;
+    case 'cheer': { const b = 0.12 * Math.sin(t * 5); return { up: V3(0.55 * s, 0.85 + b, 0.15), lo: V3(0.12 * s, 1, 0.1) }; }
+    case 'hips': return { up: V3(0.7 * s, -0.7, -0.12), lo: V3(-0.8 * s, -0.35, 0.3) };
+    case 'think': return side === 'right' ? { up: V3(-0.22, -0.85, 0.45), lo: V3(0.5, 0.8, 0.4) } : { up: V3(0.25, -0.9, 0.3), lo: V3(-0.8, 0.1, 0.55) };
+    default: return rel;
+  }
+}
+function camArm(side, now) {
+  const L = T.arms; if (!L || now - L.at > 700) return null;
+  const user = S.mirror ? (side === 'left' ? 'right' : 'left') : side;
+  const id = user === 'left' ? [11, 13, 15] : [12, 14, 16];
+  const [sh, el, wr] = id.map(i => L.w[i]);
+  if (!sh || !el || !wr || Math.min(el.visibility ?? 1, wr.visibility ?? 1) < 0.5) return null;
+  const sx = S.mirror ? -1 : 1;
+  return { up: V3(sx * (el.x - sh.x), -(el.y - sh.y), -(el.z - sh.z) * 0.5).normalize(), lo: V3(sx * (wr.x - el.x), -(wr.y - el.y), -(wr.z - el.z) * 0.5).normalize() };
+}
+
+function updateAvatar(dt, t, now) {
+  if (!A.holder) return;
+  const a = 1 - Math.exp(-dt * lerp(26, 5, S.smooth));
+  const tracked = S.track === 'camera' && T.faceOk;
+  const tgt = tracked ? T.head : idleHead(t);
+  for (const k of ['yaw', 'pitch', 'roll', 'lean']) H[k] += (tgt[k] - H[k]) * a;
+
+  // ---- body pose ----
+  for (const [b, q] of A.rest) b.quaternion.copy(q);
+  A.holder.quaternion.setFromEuler(new THREE.Euler(0, A.flip ? Math.PI : 0, 0));
+  A.holder.position.y = 0;
+  A.holder.updateMatrixWorld(true);
+  A.holder.getWorldQuaternion(_rootQ); _rootQi.copy(_rootQ).invert();
+  const hq = new THREE.Quaternion().setFromEuler(new THREE.Euler(H.pitch, H.yaw, H.roll, 'YXZ'));
+  const breath = Math.sin(t * 1.7) * 0.018 * (0.4 + S.idle);
+  if (!A.rigged) {
+    A.holder.quaternion.multiply(fracQ(hq, 0.6));
+    A.holder.position.y = breath * 0.3;
+  } else {
+    const m = A.map;
+    const f = { spine: 0.1, chest: 0.15, neck: 0.3, head: 0.45 };
+    if (!m.spine) f.head += f.spine; if (!(m.chest || m.upperChest)) f.head += f.chest; if (!m.neck) f.head += f.neck;
+    const lean = new THREE.Quaternion().setFromAxisAngle(V3(0, 0, 1), -H.lean);
+    const br = new THREE.Quaternion().setFromAxisAngle(V3(1, 0, 0), breath);
+    const torso = new THREE.Quaternion();
+    if (m.spine) { const q = lean.clone().multiply(fracQ(hq, f.spine)); modelRot(m.spine, q); torso.premultiply(q); }
+    const ch = m.upperChest || m.chest;
+    if (ch) { const q = br.clone().multiply(fracQ(hq, f.chest)); modelRot(ch, q); torso.premultiply(q); }
+    if (m.neck) modelRot(m.neck, fracQ(hq, f.neck));
+    if (m.head) modelRot(m.head, fracQ(hq, f.head));
+    if (A.arms) {
+      for (const side of ['left', 'right']) {
+        let tg = S.arms === 'camera' ? (camArm(side, now) || presetArm('relaxed', side, t)) : presetArm(S.arms, side, t);
+        const cur = A.arm[side], aa = 1 - Math.exp(-dt * lerp(18, 6, S.smooth));
+        cur.up.lerp(tg.up.normalize(), aa).normalize(); cur.lo.lerp(tg.lo.normalize(), aa).normalize();
+        aimBone(m[side + 'UpperArm'], m[side + 'LowerArm'], cur.up, torso);
+        aimBone(m[side + 'LowerArm'], m[side + 'Hand'], cur.lo, torso);
+      }
+    }
+  }
+
+  // ---- face ----
+  const tw = { aa: 0, ih: 0, ou: 0, ee: 0, oh: 0, happy: 0, angry: 0, sad: 0, surprised: 0, relaxed: 0, blinkLeft: 0, blinkRight: 0 };
+  const bs = T.bs, useCamFace = tracked;
+  if (S.mouth === 'camera' && useCamFace) {
+    const jaw = bs.jawOpen || 0, fun = bs.mouthFunnel || 0, puck = bs.mouthPucker || 0;
+    const smile = ((bs.mouthSmileLeft || 0) + (bs.mouthSmileRight || 0)) / 2, str = ((bs.mouthStretchLeft || 0) + (bs.mouthStretchRight || 0)) / 2;
+    tw.aa = clamp(jaw * 1.8 - fun * 0.6 - puck * 0.4);
+    tw.oh = clamp(fun * 1.8 * clamp(jaw * 4));
+    tw.ou = clamp(puck * 1.5 - jaw * 0.3);
+    tw.ee = clamp(str * 2.4 * (1 - jaw));
+    tw.ih = clamp(smile * jaw * 3);
+    tw.happy = clamp((smile - 0.35) * 1.5) * 0.7;
+  } else if (S.mouth === 'voice' || (S.mouth === 'camera' && !useCamFace && VO.an)) {
+    tw[VO.vowel] = voiceOpen(now) * (0.5 + S.open * 0.6);
+  } else if (S.mouth === 'smile') {
+    tw.happy = S.open;
+  } else if (['aa', 'ih', 'ou', 'ee', 'oh'].includes(S.mouth)) {
+    tw[S.mouth] = S.open;
+  }
+  if (S.expr !== 'neutral') tw[S.expr] = Math.max(tw[S.expr], S.exprAmt);
+  // blinking
+  if (S.camBlink && useCamFace && bs.eyeBlinkLeft !== undefined) {
+    const l = clamp(((bs.eyeBlinkLeft || 0) - 0.3) / 0.4), r = clamp(((bs.eyeBlinkRight || 0) - 0.3) / 0.4);
+    tw.blinkLeft = S.mirror ? r : l; tw.blinkRight = S.mirror ? l : r;
+  } else {
+    if (BL.t < 0 && t > BL.next) BL.t = 0;
+    if (BL.t >= 0) { BL.t += dt; const p = BL.t / 0.16; const v = p < 0.5 ? p * 2 : 2 - p * 2; tw.blinkLeft = tw.blinkRight = clamp(v); if (p >= 1) { BL.t = -1; BL.next = t + 1.8 + Math.random() * 3.5; } }
+  }
+  const fa = 1 - Math.exp(-dt * 22);
+  for (const k in W) W[k] += (tw[k] - W[k]) * (k.startsWith('blink') ? 0.7 : fa);
+  if (A.face) A.face.apply(W, S.mouth === 'camera' && useCamFace && A.face.arkit ? bs : null, S.mirror);
+  if (A.rigged && A.face && !A.face.hasMouth && A.map.jaw) {
+    const open = Math.max(W.aa, W.oh, W.ou * 0.6, W.ee * 0.4, W.ih * 0.3);
+    if (open > 0.01) modelRot(A.map.jaw, new THREE.Quaternion().setFromAxisAngle(V3(1, 0, 0).applyQuaternion(hq), open * 0.32));
+  }
+  if (A.vrm) A.vrm.update(dt);
+}
+
+/* ================= background ================= */
+const BG = { green: '#00ff00', blue: '#0047bb', black: '#000000', white: '#ffffff' };
+let bgUrl = null;
+function applyBg() {
+  const st = $('#stage'), img = $('#bgImg'), vid = $('#bgVideo');
+  img.style.display = 'none'; vid.style.display = 'none';
+  let col = BG[S.bg] || S.bgColor;
+  if (S.bg === 'color') col = S.bgColor;
+  if (S.bg === 'camera') { col = '#000'; if (T.stream) vid.style.display = 'block'; }
+  if (S.bg === 'image') { col = '#000'; if (bgUrl) img.style.display = 'block'; }
+  vid.classList.toggle('mirror', S.mirror);
+  st.style.setProperty('--bg', col);
+  $('#colorRow').classList.toggle('hide', S.bg !== 'color');
+  $('#imgRow').classList.toggle('hide', S.bg !== 'image');
+}
+$('#bgColor').value = S.bgColor;
+$('#bgColor').oninput = e => { S.bgColor = e.target.value; S.bg = 'color'; save(); syncUI(); applyBg(); };
+$('#bgFile').onchange = e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  if (bgUrl) URL.revokeObjectURL(bgUrl); bgUrl = URL.createObjectURL(f); $('#bgImg').src = bgUrl; applyBg();
+};
+function applyPip() { $('#pip').style.display = S.pip && T.stream && S.track === 'camera' ? 'block' : 'none'; $('#pipVid').classList.toggle('mirror', true); }
+
+/* ================= UI wiring ================= */
+let openP = null;
+function openPanel(id) {
+  if (openP === id) return closePanel();
+  closePanel(); openP = id; $('#' + id).classList.add('open');
+  $$('.tab').forEach(t => t.classList.toggle('on', t.dataset.p === id));
+}
+function closePanel() { if (openP) $('#' + openP).classList.remove('open'); openP = null; $$('.tab').forEach(t => t.classList.remove('on')); }
+$$('.tab').forEach(t => t.onclick = () => openPanel(t.dataset.p));
+$$('[data-close]').forEach(b => b.onclick = () => { closePanel(); if (!S.seen) { S.seen = true; save(); } });
+window.vstageBack = () => { if (openP) { closePanel(); return true; } return false; };
+
+function syncUI() {
+  $$('.chips[data-key]').forEach(g => g.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', String(S[g.dataset.key]) === c.dataset.v)));
+  $$('input[type=range][data-key]').forEach(i => i.value = S[i.dataset.key]);
+  $$('input[type=checkbox][data-key]').forEach(i => i.checked = !!S[i.dataset.key]);
+}
+$$('.chips[data-key]').forEach(g => g.addEventListener('click', e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  const k = g.dataset.key; S[k] = c.dataset.v; save(); syncUI(); onChange(k);
+}));
+$$('input[type=range][data-key]').forEach(i => i.oninput = () => { S[i.dataset.key] = parseFloat(i.value); save(); });
+$$('input[type=checkbox][data-key]').forEach(i => i.onchange = () => { S[i.dataset.key] = i.checked; save(); onChange(i.dataset.key); });
+
+function onChange(k) {
+  if (k === 'frame') frameShot(S.frame);
+  if (k === 'track') { if (S.track === 'camera') { startCamera(); ensureFace(); if (S.arms === 'camera') ensurePose(); } else stopCamera(); mouthNote(); }
+  if (k === 'arms' && S.arms === 'camera') { if (S.track !== 'camera') { S.track = 'camera'; save(); syncUI(); onChange('track'); } ensurePose(); toast('Hold the phone so your arms are in view of the front camera.'); }
+  if (k === 'mouth') { if (S.mouth === 'voice') ensureMic(); else stopMic(); if (S.mouth === 'camera' && S.track !== 'camera') toast('Turn on “Follow me” in Pose to copy your mouth.'); mouthNote(); }
+  if (k === 'bg') { if (S.bg === 'camera' && S.track !== 'camera') { S.track = 'camera'; save(); syncUI(); onChange('track'); } if (S.bg === 'image' && !bgUrl) $('#bgFile').click(); applyBg(); }
+  if (k === 'mirror') { T.neutral = null; applyBg(); }
+  if (k === 'pip') applyPip();
+  if (k === 'timer') document.body.classList.toggle('showtimer', !!S.timer);
+}
+$('#centerBtn').onclick = () => { if (T.raw) { T.neutral = { ...T.raw }; toast('Centered!'); } else toast('Look at the front camera first.'); };
+
+/* ================= recording ================= */
+const REC = { state: 'idle', t0: 0, taps: 0 };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+$('#recBtn').onclick = () => {
+  if (!isApp) return toast('MP4 recording works in the VStage Android app.');
+  if (REC.state !== 'idle') return;
+  REC.state = 'asking'; $('#recBtn').classList.add('busy');
+  N.startRecording(!!S.mic);
+};
+function endRec() { REC.state = 'idle'; document.body.classList.remove('rec', 'going'); $('#count').style.display = 'none'; $('#recBtn').classList.remove('busy'); controls.enabled = true; }
+async function countdown() {
+  REC.state = 'countdown'; closePanel(); controls.enabled = false;
+  document.body.classList.add('rec');
+  const n = parseInt(S.countdown, 10) || 0;
+  $('#count').style.display = 'grid';
+  for (let i = n; i > 0; i--) { if (REC.state !== 'countdown') return; $('#countN').textContent = i; await sleep(1000); }
+  if (n === 0) { $('#countN').textContent = ''; await sleep(900); }
+  if (REC.state !== 'countdown') return;
+  $('#count').style.display = 'none';
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  N.beginRecording(innerWidth > innerHeight, (parseInt(S.quality, 10) || 12) * 1000000, parseInt(S.fps, 10) || 30);
+}
+window.vstageNative = (type, msg) => {
+  if (type === 'ready') countdown();
+  else if (type === 'recording') { REC.state = 'recording'; REC.t0 = performance.now(); document.body.classList.add('going'); }
+  else if (type === 'saved') { endRec(); openPanel('saved'); }
+  else if (type === 'cancelled') { endRec(); if (msg) toast(msg); }
+  else if (type === 'error') { endRec(); toast(msg || 'Recording failed.', 6000); }
+};
+window.vstageResume = () => { if (S.track === 'camera' && !T.stream) startCamera(); };
+// double-tap anywhere to stop while recording
+addEventListener('pointerdown', () => {
+  if (REC.state !== 'recording' && REC.state !== 'countdown') return;
+  const now = performance.now();
+  if (now - REC.taps < 380) { REC.taps = 0; N.stopRecording(); } else REC.taps = now;
+}, true);
+$('#savedPlay').onclick = () => N && N.openLast(); $('#savedShare').onclick = () => N && N.shareLast();
+$('#lastPlay').onclick = () => isApp ? N.openLast() : toast('Only in the Android app.');
+$('#lastShare').onclick = () => isApp ? N.shareLast() : toast('Only in the Android app.');
+
+/* ================= main loop ================= */
+let last = performance.now();
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.1, Math.max(0.001, (now - last) / 1000)); last = now;
+  trackStep(now);
+  updateAvatar(dt, now / 1000, now);
+  controls.update();
+  renderer.render(scene, camera);
+  if (REC.state === 'recording' && S.timer) { const s = Math.floor((now - REC.t0) / 1000); $('#timer').textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+}
+
+/* ================= start ================= */
+(async () => {
+  syncUI(); applyBg(); document.body.classList.toggle('showtimer', !!S.timer);
+  loadDemo();
+  $('#boot').remove();
+  requestAnimationFrame(loop);
+  refreshStatus();
+  if (!S.seen) openPanel('welcome');
+  try { const saved = await idbGet(); if (saved && saved.buf) await loadBuffer(saved.buf, saved.name, false); } catch (e) { console.warn(e); }
+  if (S.track === 'camera') { startCamera(); ensureFace(); if (S.arms === 'camera') ensurePose(); }
+  if (S.mouth === 'voice') ensureMic();
+})();
+</script>
+</body>
+</html>
